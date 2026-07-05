@@ -32,6 +32,7 @@ const Calendar = () => {
 
   useEffect(() => {
     fetchBookings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStore]);
 
   const fetchBookings = async () => {

@@ -31,6 +31,7 @@ const ExpensesList = () => {
   useEffect(() => {
     fetchExpenses();
     fetchAccounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStore]);
 
   const fetchAccounts = async () => {

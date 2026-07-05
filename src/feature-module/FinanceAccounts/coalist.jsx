@@ -23,6 +23,7 @@ const COAList = () => {
 
   useEffect(() => {
     fetchCOA();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStore]);
 
   const fetchCOA = async () => {
