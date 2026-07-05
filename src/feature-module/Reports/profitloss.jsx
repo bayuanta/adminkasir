@@ -26,6 +26,7 @@ const ProfitLoss = () => {
 
   useEffect(() => {
     fetchProfitAndLoss();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStore, dateRange]);
 
   const fetchProfitAndLoss = async () => {

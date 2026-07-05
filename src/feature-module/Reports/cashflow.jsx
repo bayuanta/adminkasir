@@ -24,10 +24,12 @@ const CashFlow = () => {
 
   useEffect(() => {
     fetchAccounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStore]);
 
   useEffect(() => {
     fetchCashFlow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accounts]);
 
   const fetchAccounts = async () => {

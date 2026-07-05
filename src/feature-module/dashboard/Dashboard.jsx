@@ -35,6 +35,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStore, dateRange]);
 
   const fetchDashboardData = async () => {
