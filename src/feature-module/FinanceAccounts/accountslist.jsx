@@ -20,11 +20,25 @@ const AccountsList = () => {
   const [accountNumber, setAccountNumber] = useState("");
   const [accountType, setAccountType] = useState("Kas & Bank");
   const [balance, setBalance] = useState(0);
+  const [coaId, setCoaId] = useState(null);
+  const [coasList, setCoasList] = useState([]);
 
   useEffect(() => {
     fetchAccounts();
+    fetchCOA();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStore]);
+
+  const fetchCOA = async () => {
+    try {
+      let query = supabase.from('coa').select('*').eq('account_type', 'Asset').eq('is_active', true);
+      if (selectedStore) query = query.or(`branch_id.eq.${selectedStore},branch_id.is.null`);
+      const { data, error } = await query;
+      if (!error) setCoasList(data || []);
+    } catch (err) {
+      console.error("Error fetching COA:", err);
+    }
+  };
 
   const fetchAccounts = async () => {
     setLoading(true);
@@ -56,6 +70,7 @@ const AccountsList = () => {
     setAccountNumber("");
     setAccountType("Kas & Bank");
     setBalance(0);
+    setCoaId(null);
     setIsModalVisible(true);
   };
 
@@ -66,6 +81,7 @@ const AccountsList = () => {
     setAccountNumber(record.account_number || "");
     setAccountType(record.account_type || "Kas & Bank");
     setBalance(record.balance || 0);
+    setCoaId(record.coa_id || null);
     setIsModalVisible(true);
   };
 
@@ -89,6 +105,7 @@ const AccountsList = () => {
       account_number: accountNumber,
       account_type: accountType,
       balance: balance,
+      coa_id: coaId || null,
       branch_id: selectedStore || null
     };
 
@@ -165,8 +182,8 @@ const AccountsList = () => {
         <div className="page-header">
           <div className="row align-items-center w-100">
             <div className="col-lg-10 col-sm-12">
-              <h3 className="page-title fw-bold" style={{color: '#2c3e50'}}>Daftar Akun Keuangan (Chart of Accounts)</h3>
-              <h6 className="text-muted" style={{fontSize: '13px'}}>Kelola kas, rekening bank, piutang, dan dompet digital</h6>
+              <h3 className="page-title fw-bold" style={{color: '#2c3e50'}}>Rekening & Kas</h3>
+              <h6 className="text-muted" style={{fontSize: '13px'}}>Kelola kas laci, rekening bank, dan dompet digital</h6>
             </div>
             <div className="col-lg-2 col-sm-12 d-flex justify-content-end gap-2">
               <button className="btn btn-outline-secondary d-flex align-items-center justify-content-center p-2" onClick={fetchAccounts}>
@@ -253,6 +270,20 @@ const AccountsList = () => {
               onChange={setBalance}
               formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
               parser={value => value.replace(/\$\s?|(,*)/g, '')}
+            />
+          </div>
+        </div>
+
+        <div className="row">
+          <div className="col-lg-12 mb-4">
+            <label className="form-label" style={{fontSize: '13px', color: '#555'}}>Link ke Buku Besar (COA)</label>
+            <Select
+              className="w-100"
+              value={coaId}
+              onChange={setCoaId}
+              allowClear
+              placeholder="Pilih Akun Buku Besar (Opsional tapi disarankan)"
+              options={coasList.map(coa => ({ value: coa.id, label: `${coa.account_code} - ${coa.account_name}` }))}
             />
           </div>
         </div>
