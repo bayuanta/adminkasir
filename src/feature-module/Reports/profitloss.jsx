@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useContext } from "react";
-import { DatePicker, Table, Card, Row, Col, Typography, Statistic, Spin, message, Button } from 'antd';
-import { ArrowUpOutlined, ArrowDownOutlined, DollarCircleOutlined } from '@ant-design/icons';
+import { DatePicker, Table, Card, Row, Col, Statistic, Spin, message, Button } from 'antd';
+import { ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import { supabase } from "../../supabaseClient";
 import { StoreContext } from "../../core/context/StoreContext";
 import dayjs from 'dayjs';
 import * as Icon from 'react-feather';
 
 const { RangePicker } = DatePicker;
-const { Title, Text } = Typography;
 
 const ProfitLoss = () => {
   const { selectedStore } = useContext(StoreContext);
