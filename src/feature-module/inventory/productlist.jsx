@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
 import { PlusCircle, RotateCcw, Edit, Trash2 } from "feather-icons-react/build/IconComponents";
-import { Popconfirm, message } from "antd";
+import { Popconfirm, message, Select } from "antd";
+const { Option } = Select;
 import Table from "../../core/pagination/datatable";
 import { supabase } from "../../supabaseClient";
 import { StoreContext } from "../../core/context/StoreContext";
@@ -10,6 +11,7 @@ const ProductList = () => {
   const { selectedStore } = useContext(StoreContext);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState("all");
 
   useEffect(() => {
     fetchProducts();
@@ -89,14 +91,8 @@ const ProductList = () => {
     {
       title: "Kategori",
       dataIndex: "category",
-      render: (text) => {
-        let badgeColor = "bg-lightyellow";
-        if (text === "makanan") badgeColor = "bg-lightgreen";
-        if (text === "minuman") badgeColor = "bg-lightblue";
-        if (text.includes("tiket")) badgeColor = "bg-lightred";
-        return <span className={`badges ${badgeColor}`}>{text.toUpperCase()}</span>;
-      },
-      sorter: (a, b) => a.category.localeCompare(b.category),
+      render: (text) => <span>{text ? text.toUpperCase() : "-"}</span>,
+      sorter: (a, b) => (a.category || "").localeCompare(b.category || ""),
     },
     {
       title: "Harga",
@@ -133,6 +129,12 @@ const ProductList = () => {
     },
   ];
 
+  const filteredProducts = selectedCategory === "all" 
+    ? products 
+    : products.filter(p => p.category === selectedCategory);
+  
+  const uniqueCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
+
   return (
     <div className="page-wrapper">
       <div className="content">
@@ -144,6 +146,18 @@ const ProductList = () => {
             </div>
           </div>
           <ul className="table-top-head">
+            <li className="me-2">
+              <Select 
+                value={selectedCategory} 
+                onChange={setSelectedCategory} 
+                style={{ width: 160 }}
+              >
+                <Option value="all">Semua Kategori</Option>
+                {uniqueCategories.map(cat => (
+                  <Option key={cat} value={cat}>{cat.toUpperCase()}</Option>
+                ))}
+              </Select>
+            </li>
             <li>
               <Link to="#" onClick={(e) => { e.preventDefault(); fetchProducts(); }} data-bs-toggle="tooltip" title="Refresh Data">
                 <RotateCcw />
@@ -169,7 +183,7 @@ const ProductList = () => {
                   <h6 className="mt-3">Mengambil data dari Supabase...</h6>
                 </div>
               ) : (
-                <Table columns={columns} dataSource={products} />
+                <Table columns={columns} dataSource={filteredProducts} />
               )}
             </div>
           </div>
