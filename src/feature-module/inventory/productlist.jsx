@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
 import { PlusCircle, RotateCcw, Edit, Trash2 } from "feather-icons-react/build/IconComponents";
-import { Popconfirm, message, Select } from "antd";
+import { Popconfirm, message, Select, Modal, Form, Input, InputNumber } from "antd";
 const { Option } = Select;
 import Table from "../../core/pagination/datatable";
 import { supabase } from "../../supabaseClient";
@@ -12,11 +12,65 @@ const ProductList = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [branches, setBranches] = useState([]);
+  const [form] = Form.useForm();
+  const [submitLoading, setSubmitLoading] = useState(false);
 
   useEffect(() => {
     fetchProducts();
+    fetchBranches();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStore]);
+
+  const fetchBranches = async () => {
+    const { data } = await supabase.from('branches').select('id, name');
+    if (data) setBranches(data);
+  };
+
+  const handleAddClick = () => {
+    setEditingProduct(null);
+    form.resetFields();
+    if (branches.length > 0) {
+      form.setFieldsValue({ branch_id: branches[0].id });
+    }
+    setIsModalVisible(true);
+  };
+
+  const handleEditClick = (record) => {
+    setEditingProduct(record);
+    form.setFieldsValue({
+      name: record.name,
+      category: record.category,
+      price: record.price,
+      sku: record.sku,
+      branch_id: record.branch_id
+    });
+    setIsModalVisible(true);
+  };
+
+  const handleModalSubmit = async (values) => {
+    setSubmitLoading(true);
+    try {
+      if (editingProduct) {
+        const { error } = await supabase.from('products').update(values).eq('id', editingProduct.id);
+        if (error) throw error;
+        message.success('Produk berhasil diubah');
+      } else {
+        const { error } = await supabase.from('products').insert([values]);
+        if (error) throw error;
+        message.success('Produk berhasil ditambahkan');
+      }
+      setIsModalVisible(false);
+      fetchProducts();
+    } catch (err) {
+      console.error(err);
+      message.error('Gagal menyimpan produk');
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
 
   const handleDelete = async (id) => {
     try {
@@ -91,7 +145,7 @@ const ProductList = () => {
     {
       title: "Kategori",
       dataIndex: "category",
-      render: (text) => <span>{text ? text.toUpperCase() : "-"}</span>,
+      render: (text) => <span>{text ? text.replace(/_/g, ' ').toUpperCase() : "-"}</span>,
       sorter: (a, b) => (a.category || "").localeCompare(b.category || ""),
     },
     {
@@ -116,9 +170,9 @@ const ProductList = () => {
       title: "Aksi",
       render: (_, record) => (
         <div className="d-flex align-items-center gap-2">
-           <Link to={`/edit-product/${record.id}`} className="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center p-2" title="Edit">
+           <button onClick={() => handleEditClick(record)} className="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center p-2" title="Edit">
              <Edit size={14} />
-           </Link>
+           </button>
            <Popconfirm title="Yakin ingin menghapus produk ini?" onConfirm={() => handleDelete(record.id)}>
              <button className="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center p-2" title="Hapus">
                <Trash2 size={14} />
@@ -154,7 +208,7 @@ const ProductList = () => {
               >
                 <Option value="all">Semua Kategori</Option>
                 {uniqueCategories.map(cat => (
-                  <Option key={cat} value={cat}>{cat.toUpperCase()}</Option>
+                  <Option key={cat} value={cat}>{cat.replace(/_/g, ' ').toUpperCase()}</Option>
                 ))}
               </Select>
             </li>
@@ -165,10 +219,10 @@ const ProductList = () => {
             </li>
           </ul>
           <div className="page-btn">
-            <Link to="/add-product" className="btn btn-added">
+            <button onClick={handleAddClick} className="btn btn-added">
               <PlusCircle className="me-2 iconsize" />
               Tambah Produk
-            </Link>
+            </button>
           </div>
         </div>
         {/* product list */}
@@ -190,6 +244,63 @@ const ProductList = () => {
         </div>
         {/* /product list */}
       </div>
+
+      <Modal
+        title={editingProduct ? "Ubah Produk" : "Tambah Produk"}
+        open={isModalVisible}
+        onCancel={() => setIsModalVisible(false)}
+        footer={null}
+      >
+        <Form form={form} layout="vertical" onFinish={handleModalSubmit}>
+          <Form.Item label="Nama Produk / Tiket" name="name" rules={[{ required: true, message: 'Harap isi nama produk!' }]}>
+            <Input placeholder="Contoh: Nasi Goreng Spesial" />
+          </Form.Item>
+          
+          <div className="row">
+            <div className="col-md-6">
+              <Form.Item label="Kategori" name="category" rules={[{ required: true, message: 'Pilih kategori!' }]}>
+                <Select>
+                  <Option value="makanan">Makanan</Option>
+                  <Option value="minuman">Minuman</Option>
+                  <Option value="tiket_dewasa">Tiket Dewasa</Option>
+                  <Option value="tiket_anak">Tiket Anak</Option>
+                  <Option value="snack">Snack</Option>
+                </Select>
+              </Form.Item>
+            </div>
+            <div className="col-md-6">
+              <Form.Item label="Harga (Rp)" name="price" rules={[{ required: true, message: 'Harap isi harga!' }]}>
+                <InputNumber style={{ width: '100%' }} placeholder="Contoh: 15000" />
+              </Form.Item>
+            </div>
+          </div>
+
+          <div className="row">
+            <div className="col-md-6">
+              <Form.Item label="SKU / Barcode" name="sku">
+                <Input placeholder="Opsional" />
+              </Form.Item>
+            </div>
+            <div className="col-md-6">
+              <Form.Item label="Cabang / Lokasi" name="branch_id" rules={[{ required: true, message: 'Pilih cabang!' }]}>
+                <Select>
+                  {branches.map(b => (
+                    <Option key={b.id} value={b.id}>{b.name}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </div>
+          </div>
+
+          <div className="d-flex justify-content-end gap-2 mt-4">
+            <button type="button" className="btn btn-outline-secondary" onClick={() => setIsModalVisible(false)}>Batal</button>
+            <button type="submit" className="btn btn-primary text-white" disabled={submitLoading}>
+              {submitLoading ? "Menyimpan..." : "Simpan"}
+            </button>
+          </div>
+        </Form>
+      </Modal>
+
     </div>
   );
 };
