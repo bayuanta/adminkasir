@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
-import { PlusCircle, RotateCcw } from "feather-icons-react/build/IconComponents";
+import { PlusCircle, RotateCcw, Edit, Trash2 } from "feather-icons-react/build/IconComponents";
+import { Popconfirm, message } from "antd";
 import Table from "../../core/pagination/datatable";
 import { supabase } from "../../supabaseClient";
 import { StoreContext } from "../../core/context/StoreContext";
@@ -14,6 +15,18 @@ const ProductList = () => {
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStore]);
+
+  const handleDelete = async (id) => {
+    try {
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) throw error;
+      message.success('Produk berhasil dihapus');
+      fetchProducts();
+    } catch (err) {
+      console.error(err);
+      message.error('Gagal menghapus produk');
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -52,9 +65,26 @@ const ProductList = () => {
 
   const columns = [
     {
+      title: "Foto",
+      dataIndex: "image_url",
+      render: (text, record) => (
+        <img 
+          src={record.image_url || "https://via.placeholder.com/40"} 
+          alt={record.name} 
+          style={{width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #eaeaea'}} 
+        />
+      )
+    },
+    {
       title: "Nama Produk / Tiket",
       dataIndex: "name",
       sorter: (a, b) => a.name.localeCompare(b.name),
+    },
+    {
+      title: "SKU",
+      dataIndex: "sku",
+      render: (text, record) => record.sku || "-",
+      sorter: (a, b) => (a.sku || "").localeCompare(b.sku || ""),
     },
     {
       title: "Kategori",
@@ -85,6 +115,21 @@ const ProductList = () => {
       render: () => (
         <span className="badges bg-lightgreen">Aktif</span>
       ),
+    },
+    {
+      title: "Aksi",
+      render: (_, record) => (
+        <div className="d-flex align-items-center gap-2">
+           <Link to={`/edit-product/${record.id}`} className="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center p-2" title="Edit">
+             <Edit size={14} />
+           </Link>
+           <Popconfirm title="Yakin ingin menghapus produk ini?" onConfirm={() => handleDelete(record.id)}>
+             <button className="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center p-2" title="Hapus">
+               <Trash2 size={14} />
+             </button>
+           </Popconfirm>
+        </div>
+      )
     },
   ];
 
