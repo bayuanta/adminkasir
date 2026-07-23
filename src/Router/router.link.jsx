@@ -92,7 +92,6 @@ import GeneralLedger from "../feature-module/Reports/generalledger";
 import TrialBalance from "../feature-module/Reports/trialbalance";
 import BalanceSheet from "../feature-module/Reports/balancesheet";
 import ProfitLoss from "../feature-module/Reports/profitloss";
-import CashFlow from "../feature-module/Reports/cashflow";
 import ExpenseCategory from "../feature-module/FinanceAccounts/expensecategory";
 import Calendar from "../feature-module/Application/calendar";
 import FormWizard from "../feature-module/uiinterface/forms/formelements/form-wizard";
@@ -865,13 +864,6 @@ export const publicRoutes = [
     path: routes.profitloss,
     name: "profitloss",
     element: <ProfitLoss />,
-    route: Route,
-  },
-  {
-    id: 6103,
-    path: routes.cashflow,
-    name: "cashflow",
-    element: <CashFlow />,
     route: Route,
   },
   {

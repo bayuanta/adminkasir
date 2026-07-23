@@ -102,7 +102,6 @@ export const all_routes = {
   trialbalance: "/trial-balance",
   balancesheet: "/balance-sheet",
   profitloss: "/profit-loss",
-  cashflow: "/cash-flow",
   calendar: "/calendar",
   variantattributes: "/variant-attributes",
   qrcode: "/qrcode",
