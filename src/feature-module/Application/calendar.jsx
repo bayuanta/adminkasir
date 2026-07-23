@@ -6,7 +6,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 import "../../style/css/fullcalendar.min.css";
 import { supabase } from "../../supabaseClient";
 import { StoreContext } from "../../core/context/StoreContext";
-import { Modal, DatePicker, TimePicker, Calendar as AntCalendar, theme } from 'antd';
+import { Modal, DatePicker, TimePicker, Calendar as AntCalendar, theme, Radio, Table } from 'antd';
 import dayjs from 'dayjs';
 import * as Icon from 'react-feather';
 
@@ -14,6 +14,7 @@ const Calendar = () => {
   const { selectedStore } = useContext(StoreContext);
   const { token } = theme.useToken();
   const [currentEvents, setCurrentEvents] = useState([]);
+  const [viewMode, setViewMode] = useState('calendar');
   
   // Modal states
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -199,16 +200,72 @@ const Calendar = () => {
     boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
   };
 
+  const handleListEventClick = (record) => {
+    setSelectedEvent({
+      id: record.id,
+      title: record.title,
+      start: record.start,
+      end: record.end,
+      extendedProps: record.extendedProps,
+      backgroundColor: record.className
+    });
+    setIsEditMode(false);
+    setIsModalVisible(true);
+  };
+
+  const listColumns = [
+    {
+      title: 'Judul Booking',
+      dataIndex: 'title',
+      key: 'title',
+      render: (text, record) => <span className="fw-bold" style={{cursor: 'pointer', color: '#2c3e50'}} onClick={() => handleListEventClick(record)}>{text}</span>
+    },
+    {
+      title: 'Waktu Mulai',
+      key: 'start',
+      render: (_, record) => <span>{dayjs(record.start).format('DD MMM YYYY, HH:mm')}</span>
+    },
+    {
+      title: 'Waktu Selesai',
+      key: 'end',
+      render: (_, record) => <span>{dayjs(record.end).format('DD MMM YYYY, HH:mm')}</span>
+    },
+    {
+      title: 'Lokasi',
+      key: 'location',
+      render: (_, record) => record.extendedProps?.location || '-'
+    },
+    {
+      title: 'Label',
+      dataIndex: 'className',
+      key: 'color',
+      render: (color) => <span className={`badge ${color}`}>&nbsp;&nbsp;&nbsp;&nbsp;</span>
+    },
+    {
+      title: 'Aksi',
+      key: 'action',
+      render: (_, record) => (
+        <button className="btn btn-sm text-white" style={{background: '#ff9f43'}} onClick={() => handleListEventClick(record)}>
+           Detail
+        </button>
+      )
+    }
+  ];
+
   return (
     <div className="page-wrapper">
       <div className="content">
         <div className="page-header">
           <div className="row align-items-center w-100">
-            <div className="col-lg-10 col-sm-12">
+            <div className="col-lg-6 col-sm-12">
               <h3 className="page-title fw-bold" style={{color: '#2c3e50'}}>Calendar</h3>
               <h6 className="text-muted" style={{fontSize: '13px'}}>Manage Your calendar</h6>
             </div>
-            <div className="col-lg-2 col-sm-12 d-flex justify-content-end gap-2">
+            <div className="col-lg-6 col-sm-12 d-flex justify-content-end gap-2 mt-3 mt-lg-0">
+              <Radio.Group value={viewMode} onChange={e => setViewMode(e.target.value)} buttonStyle="solid" style={{display: 'flex', alignItems: 'center'}}>
+                 <Radio.Button value="calendar"><Icon.Calendar size={14} className="me-1"/> Kalender</Radio.Button>
+                 <Radio.Button value="list"><Icon.List size={14} className="me-1"/> Daftar</Radio.Button>
+              </Radio.Group>
               <button className="btn btn-outline-secondary d-flex align-items-center justify-content-center p-2"><Icon.RefreshCcw size={16}/></button>
               <button className="btn text-white fw-bold d-flex align-items-center justify-content-center gap-2" style={{background: '#ff9f43', borderRadius: '6px'}} onClick={() => {
                 setIsEditMode(false);
@@ -276,25 +333,35 @@ const Calendar = () => {
           <div className="col-lg-9 col-md-8">
             <div className="card bg-white shadow-sm border-0" style={{borderRadius: '8px'}}>
               <div className="card-body">
-                <FullCalendar
-                  plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                  headerToolbar={{
-                    left: "today prev,next",
-                    center: "title",
-                    right: "dayGridMonth,timeGridWeek,timeGridDay",
-                  }}
-                  initialView="dayGridMonth"
-                  editable={true}
-                  selectable={true}
-                  selectMirror={true}
-                  dayMaxEvents={2} // Limit to 2 events then show "+X more"
-                  events={currentEvents} 
-                  select={handleDateSelect}
-                  eventClick={handleEventClick}
-                  eventDrop={handleEventDrop}
-                  eventResize={handleEventDrop}
-                  height="750px"
-                />
+                {viewMode === 'calendar' ? (
+                  <FullCalendar
+                    plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                    headerToolbar={{
+                      left: "today prev,next",
+                      center: "title",
+                      right: "dayGridMonth,timeGridWeek,timeGridDay",
+                    }}
+                    initialView="dayGridMonth"
+                    editable={true}
+                    selectable={true}
+                    selectMirror={true}
+                    dayMaxEvents={2} // Limit to 2 events then show "+X more"
+                    events={currentEvents} 
+                    select={handleDateSelect}
+                    eventClick={handleEventClick}
+                    eventDrop={handleEventDrop}
+                    eventResize={handleEventDrop}
+                    height="750px"
+                  />
+                ) : (
+                  <Table 
+                    columns={listColumns}
+                    dataSource={currentEvents}
+                    rowKey="id"
+                    pagination={{ pageSize: 10 }}
+                    bordered
+                  />
+                )}
               </div>
             </div>
           </div>
