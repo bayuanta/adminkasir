@@ -48,6 +48,8 @@ export const SidebarData = [
         submenuItems: [
             { label: "Rekening & Kas", link: "/accounts", icon: <Icon.Briefcase />, showSubRoute: false, submenu: false },
             { label: "Buku Besar (COA)", link: "/coa", icon: <Icon.Book />, showSubRoute: false, submenu: false },
+            { label: "Input Jurnal", link: "/journal-entry", icon: <Icon.Edit3 />, showSubRoute: false, submenu: false },
+            { label: "Laporan Buku Besar", link: "/general-ledger", icon: <Icon.FileText />, showSubRoute: false, submenu: false },
             { label: "Laba / Rugi", link: "/profit-loss", icon: <Icon.PieChart />, showSubRoute: false, submenu: false },
             { label: "Arus Kas", link: "/cash-flow", icon: <Icon.Repeat />, showSubRoute: false, submenu: false }
         ]

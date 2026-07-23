@@ -87,6 +87,8 @@ import Chats from "../feature-module/Application/chat";
 import ExpensesList from "../feature-module/FinanceAccounts/expenseslist";
 import AccountsList from "../feature-module/FinanceAccounts/accountslist";
 import COAList from "../feature-module/FinanceAccounts/coalist";
+import JournalEntry from "../feature-module/FinanceAccounts/journalentry";
+import GeneralLedger from "../feature-module/Reports/generalledger";
 import ProfitLoss from "../feature-module/Reports/profitloss";
 import CashFlow from "../feature-module/Reports/cashflow";
 import ExpenseCategory from "../feature-module/FinanceAccounts/expensecategory";
@@ -826,6 +828,20 @@ export const publicRoutes = [
     path: routes.coa,
     name: "coa",
     element: <COAList />,
+    route: Route,
+  },
+  {
+    id: 6103,
+    path: routes.journalentry,
+    name: "journalentry",
+    element: <JournalEntry />,
+    route: Route,
+  },
+  {
+    id: 6104,
+    path: routes.generalledger,
+    name: "generalledger",
+    element: <GeneralLedger />,
     route: Route,
   },
   {

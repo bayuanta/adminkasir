@@ -97,6 +97,8 @@ export const all_routes = {
   expensecategory: "/expense-category",
   accounts: "/accounts",
   coa: "/coa",
+  journalentry: "/journal-entry",
+  generalledger: "/general-ledger",
   profitloss: "/profit-loss",
   cashflow: "/cash-flow",
   calendar: "/calendar",
