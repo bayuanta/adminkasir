@@ -89,6 +89,8 @@ import AccountsList from "../feature-module/FinanceAccounts/accountslist";
 import COAList from "../feature-module/FinanceAccounts/coalist";
 import JournalEntry from "../feature-module/FinanceAccounts/journalentry";
 import GeneralLedger from "../feature-module/Reports/generalledger";
+import TrialBalance from "../feature-module/Reports/trialbalance";
+import BalanceSheet from "../feature-module/Reports/balancesheet";
 import ProfitLoss from "../feature-module/Reports/profitloss";
 import CashFlow from "../feature-module/Reports/cashflow";
 import ExpenseCategory from "../feature-module/FinanceAccounts/expensecategory";
@@ -842,6 +844,20 @@ export const publicRoutes = [
     path: routes.generalledger,
     name: "generalledger",
     element: <GeneralLedger />,
+    route: Route,
+  },
+  {
+    id: 6105,
+    path: routes.trialbalance,
+    name: "trialbalance",
+    element: <TrialBalance />,
+    route: Route,
+  },
+  {
+    id: 6106,
+    path: routes.balancesheet,
+    name: "balancesheet",
+    element: <BalanceSheet />,
     route: Route,
   },
   {

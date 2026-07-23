@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
-import { DatePicker, Table, Card, Row, Col, Typography, Statistic, Spin } from 'antd';
+import { DatePicker, Table, Card, Row, Col, Typography, Statistic, Spin, message, Button } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined, DollarCircleOutlined } from '@ant-design/icons';
 import { supabase } from "../../supabaseClient";
 import { StoreContext } from "../../core/context/StoreContext";
@@ -11,7 +11,7 @@ const { Title, Text } = Typography;
 
 const ProfitLoss = () => {
   const { selectedStore } = useContext(StoreContext);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   
   // Date Range (Default: This Month)
   const [dateRange, setDateRange] = useState([dayjs().startOf('month'), dayjs().endOf('month')]);
@@ -22,70 +22,103 @@ const ProfitLoss = () => {
     netProfit: 0
   });
 
-  const [expenseBreakdown, setExpenseBreakdown] = useState([]);
+  const [revenueData, setRevenueData] = useState([]);
+  const [expenseData, setExpenseData] = useState([]);
 
   useEffect(() => {
     fetchProfitAndLoss();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStore, dateRange]);
+  }, [selectedStore]); // Only refetch when store changes, date range change uses a button
 
   const fetchProfitAndLoss = async () => {
+    if (!dateRange || !dateRange[0] || !dateRange[1]) {
+      return message.warning("Silakan pilih rentang tanggal.");
+    }
     setLoading(true);
     try {
       const startDateIso = dateRange[0].startOf('day').toISOString();
       const endDateIso = dateRange[1].endOf('day').toISOString();
 
-      // 1. Fetch Income (Completed Transactions)
-      let salesQuery = supabase
-        .from('transactions')
-        .select('total_amount')
-        .eq('status', 'completed')
-        .gte('created_at', startDateIso)
-        .lte('created_at', endDateIso);
+      // 1. Fetch COA for Revenue & Expense
+      const { data: coaData, error: coaError } = await supabase
+        .from('coa')
+        .select('id, account_code, account_name, account_type')
+        .in('account_type', ['Revenue', 'Expense']);
 
-      if (selectedStore) salesQuery = salesQuery.eq('branch_id', selectedStore);
+      if (coaError) throw coaError;
+
+      const coaMap = {};
+      coaData.forEach(c => coaMap[c.id] = c);
+
+      // 2. Fetch Journal Lines in period for those accounts
+      const coaIds = coaData.map(c => c.id);
       
-      const { data: salesData, error: salesError } = await salesQuery;
-      if (salesError) throw salesError;
+      let query = supabase
+        .from('journal_lines')
+        .select('account_id, debit, credit, journal_entries!inner(entry_date, branch_id)')
+        .in('account_id', coaIds)
+        .gte('journal_entries.entry_date', startDateIso)
+        .lte('journal_entries.entry_date', endDateIso);
 
-      const totalIncome = (salesData || []).reduce((sum, item) => sum + (item.total_amount || 0), 0);
+      if (selectedStore) {
+        query = query.eq('journal_entries.branch_id', selectedStore);
+      }
 
-      // 2. Fetch Expenses
-      let expenseQuery = supabase
-        .from('expenses')
-        .select('amount, expense_category')
-        .gte('expense_date', startDateIso)
-        .lte('expense_date', endDateIso);
+      const { data: lines, error: linesError } = await query;
+      if (linesError) throw linesError;
 
-      if (selectedStore) expenseQuery = expenseQuery.eq('branch_id', selectedStore);
+      // 3. Aggregate Data
+      const revMap = {};
+      const expMap = {};
+      let totalRev = 0;
+      let totalExp = 0;
 
-      const { data: expenseData, error: expenseError } = await expenseQuery;
-      if (expenseError) throw expenseError;
+      (lines || []).forEach(line => {
+        const coa = coaMap[line.account_id];
+        if (!coa) return;
+        
+        const debit = Number(line.debit) || 0;
+        const credit = Number(line.credit) || 0;
 
-      const totalExpenseAmount = (expenseData || []).reduce((sum, item) => sum + (item.amount || 0), 0);
-
-      // 3. Group Expenses by Category
-      const expensesByCategory = (expenseData || []).reduce((acc, curr) => {
-        const cat = curr.expense_category || 'Tidak Berkategori';
-        acc[cat] = (acc[cat] || 0) + (curr.amount || 0);
-        return acc;
-      }, {});
-
-      const breakdownArray = Object.keys(expensesByCategory).map(key => ({
-        category: key,
-        amount: expensesByCategory[key],
-        percentage: totalExpenseAmount > 0 ? (expensesByCategory[key] / totalExpenseAmount) * 100 : 0
-      })).sort((a, b) => b.amount - a.amount);
-
-      setSummary({
-        grossIncome: totalIncome,
-        totalExpenses: totalExpenseAmount,
-        netProfit: totalIncome - totalExpenseAmount
+        if (coa.account_type === 'Revenue') {
+          // Pendapatan bertambah di Kredit
+          const amount = credit - debit;
+          revMap[coa.id] = (revMap[coa.id] || 0) + amount;
+          totalRev += amount;
+        } else if (coa.account_type === 'Expense') {
+          // Beban bertambah di Debit
+          const amount = debit - credit;
+          expMap[coa.id] = (expMap[coa.id] || 0) + amount;
+          totalExp += amount;
+        }
       });
-      setExpenseBreakdown(breakdownArray);
+
+      const formattedRev = Object.keys(revMap).map(id => ({
+        id,
+        code: coaMap[id].account_code,
+        name: coaMap[id].account_name,
+        amount: revMap[id]
+      })).filter(item => item.amount !== 0).sort((a,b) => b.amount - a.amount);
+
+      const formattedExp = Object.keys(expMap).map(id => ({
+        id,
+        code: coaMap[id].account_code,
+        name: coaMap[id].account_name,
+        amount: expMap[id]
+      })).filter(item => item.amount !== 0).sort((a,b) => b.amount - a.amount);
+
+      setRevenueData(formattedRev);
+      setExpenseData(formattedExp);
+      
+      setSummary({
+        grossIncome: totalRev,
+        totalExpenses: totalExp,
+        netProfit: totalRev - totalExp
+      });
 
     } catch (err) {
       console.error("Error fetching Profit & Loss data:", err);
+      message.error("Gagal memuat Laba / Rugi");
     } finally {
       setLoading(false);
     }
@@ -93,32 +126,26 @@ const ProfitLoss = () => {
 
   const isProfit = summary.netProfit >= 0;
 
-  const expenseColumns = [
+  const columns = [
     {
-      title: 'Kategori Pengeluaran',
-      dataIndex: 'category',
-      key: 'category',
-      render: (text) => <span className="fw-bold">{text}</span>
+      title: 'Kode Akun',
+      dataIndex: 'code',
+      key: 'code',
+      width: '20%',
     },
     {
-      title: 'Persentase',
-      dataIndex: 'percentage',
-      key: 'percentage',
-      render: (val) => (
-        <div className="d-flex align-items-center">
-          <div className="progress w-100 me-2" style={{height: '6px'}}>
-            <div className="progress-bar bg-danger" role="progressbar" style={{width: `${val}%`}}></div>
-          </div>
-          <span style={{fontSize: '12px', minWidth: '40px'}}>{val.toFixed(1)}%</span>
-        </div>
-      )
+      title: 'Nama Akun',
+      dataIndex: 'name',
+      key: 'name',
+      width: '50%',
+      render: (text) => <span className="fw-bold">{text}</span>
     },
     {
       title: 'Total (Rp)',
       dataIndex: 'amount',
       key: 'amount',
       align: 'right',
-      render: (val) => <span className="text-danger fw-bold">Rp {val.toLocaleString('id-ID')}</span>
+      render: (val) => <span>Rp {new Intl.NumberFormat('id-ID').format(val)}</span>
     }
   ];
 
@@ -127,108 +154,107 @@ const ProfitLoss = () => {
       <div className="content">
         
         {/* Header Section */}
-        <div className="page-header d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <h3 className="page-title fw-bold" style={{color: '#2c3e50'}}>Dasbor Laba / Rugi</h3>
-            <h6 className="text-muted" style={{fontSize: '13px'}}>Analisis pendapatan vs pengeluaran bisnis Anda</h6>
-          </div>
-          <div className="d-flex gap-2">
-            <RangePicker 
-              value={dateRange} 
-              onChange={(dates) => { if(dates) setDateRange(dates) }}
-              format="DD MMM YYYY"
-              allowClear={false}
-              style={{ width: '260px', height: '40px', borderRadius: '6px' }}
-            />
+        <div className="page-header mb-4">
+          <div className="row align-items-center">
+            <div className="col-lg-6">
+              <h3 className="page-title fw-bold" style={{color: '#2c3e50'}}>Laporan Laba / Rugi (P&L)</h3>
+              <h6 className="text-muted" style={{fontSize: '13px'}}>Analisis pendapatan vs pengeluaran berbasis Jurnal (Double-Entry)</h6>
+            </div>
+            <div className="col-lg-6 d-flex justify-content-end gap-2 mt-3 mt-lg-0">
+              <RangePicker 
+                value={dateRange} 
+                onChange={setDateRange}
+                format="DD MMM YYYY"
+                allowClear={false}
+                style={{height: '38px'}}
+              />
+              <Button type="primary" onClick={fetchProfitAndLoss} loading={loading} style={{background: '#ff9f43', borderColor: '#ff9f43', height: '38px', fontWeight: 'bold'}}>
+                <Icon.Filter size={16} className="me-2"/> Tampilkan
+              </Button>
+            </div>
           </div>
         </div>
 
-        {loading ? (
-          <div className="d-flex justify-content-center align-items-center" style={{height: '50vh'}}>
-            <Spin size="large" />
-          </div>
-        ) : (
-          <>
-            {/* Summary Cards */}
-            <Row gutter={[20, 20]} className="mb-4">
-              <Col xs={24} md={8}>
-                <Card bordered={false} className="shadow-sm" style={{borderRadius: '12px'}}>
-                  <Statistic
-                    title={<span className="text-muted fw-bold">TOTAL PENDAPATAN</span>}
-                    value={summary.grossIncome}
-                    precision={0}
-                    valueStyle={{ color: '#28c76f', fontWeight: 'bold' }}
-                    prefix={<Icon.TrendingUp size={20} className="me-2" />}
-                    formatter={(val) => `Rp ${Number(val).toLocaleString('id-ID')}`}
-                  />
-                  <div className="mt-2 text-muted" style={{fontSize: '12px'}}>
-                    Total dari semua transaksi berstatus selesai.
-                  </div>
-                </Card>
-              </Col>
-              <Col xs={24} md={8}>
-                <Card bordered={false} className="shadow-sm" style={{borderRadius: '12px'}}>
-                  <Statistic
-                    title={<span className="text-muted fw-bold">TOTAL PENGELUARAN</span>}
-                    value={summary.totalExpenses}
-                    precision={0}
-                    valueStyle={{ color: '#ea5455', fontWeight: 'bold' }}
-                    prefix={<Icon.TrendingDown size={20} className="me-2" />}
-                    formatter={(val) => `Rp ${Number(val).toLocaleString('id-ID')}`}
-                  />
-                  <div className="mt-2 text-muted" style={{fontSize: '12px'}}>
-                    Total dari semua pencatatan operasional.
-                  </div>
-                </Card>
-              </Col>
-              <Col xs={24} md={8}>
-                <Card bordered={false} className="shadow-sm" style={{borderRadius: '12px', background: isProfit ? '#e9fbee' : '#fceaea'}}>
-                  <Statistic
-                    title={<span className="text-muted fw-bold">{isProfit ? 'LABA BERSIH (PROFIT)' : 'RUGI BERSIH (LOSS)'}</span>}
-                    value={Math.abs(summary.netProfit)}
-                    precision={0}
-                    valueStyle={{ color: isProfit ? '#28c76f' : '#ea5455', fontWeight: 'bold', fontSize: '32px' }}
-                    prefix={isProfit ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-                    formatter={(val) => `Rp ${Number(val).toLocaleString('id-ID')}`}
-                  />
-                  <div className="mt-2" style={{fontSize: '12px', color: isProfit ? '#28c76f' : '#ea5455'}}>
-                    {isProfit ? 'Bisnis Anda menghasilkan keuntungan di periode ini.' : 'Pengeluaran lebih besar dari pendapatan di periode ini.'}
-                  </div>
-                </Card>
-              </Col>
-            </Row>
+        <Spin spinning={loading}>
+          {/* Summary Cards */}
+          <Row gutter={[16, 16]} className="mb-4">
+            <Col xs={24} md={8}>
+              <Card className="shadow-sm border-0" style={{borderRadius: '8px', borderLeft: '4px solid #28c76f'}}>
+                <Statistic
+                  title={<span style={{fontSize: '14px', fontWeight: 'bold', color: '#555'}}>Total Pendapatan (Revenue)</span>}
+                  value={summary.grossIncome}
+                  precision={0}
+                  prefix="Rp"
+                  valueStyle={{ color: '#28c76f', fontWeight: 'bold', fontSize: '24px' }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} md={8}>
+              <Card className="shadow-sm border-0" style={{borderRadius: '8px', borderLeft: '4px solid #ea5455'}}>
+                <Statistic
+                  title={<span style={{fontSize: '14px', fontWeight: 'bold', color: '#555'}}>Total Beban (Expenses)</span>}
+                  value={summary.totalExpenses}
+                  precision={0}
+                  prefix="Rp"
+                  valueStyle={{ color: '#ea5455', fontWeight: 'bold', fontSize: '24px' }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} md={8}>
+              <Card className="shadow-sm border-0" style={{borderRadius: '8px', borderLeft: `4px solid ${isProfit ? '#00cfe8' : '#ea5455'}`}}>
+                <Statistic
+                  title={<span style={{fontSize: '14px', fontWeight: 'bold', color: '#555'}}>Laba Bersih (Net Profit)</span>}
+                  value={Math.abs(summary.netProfit)}
+                  precision={0}
+                  prefix="Rp"
+                  valueStyle={{ color: isProfit ? '#00cfe8' : '#ea5455', fontWeight: 'bold', fontSize: '24px' }}
+                  suffix={isProfit ? <ArrowUpOutlined style={{fontSize: '18px'}} /> : <ArrowDownOutlined style={{fontSize: '18px'}} />}
+                />
+              </Card>
+            </Col>
+          </Row>
 
-            {/* Expense Breakdown Table */}
-            <Row gutter={[20, 20]}>
-              <Col xs={24} lg={12}>
-                <Card bordered={false} className="shadow-sm" style={{borderRadius: '12px'}} title="Rincian Pengeluaran Terbesar">
-                  <Table 
-                    columns={expenseColumns} 
-                    dataSource={expenseBreakdown} 
-                    rowKey="category" 
-                    pagination={false}
-                    size="middle"
-                  />
-                  {expenseBreakdown.length === 0 && (
-                    <div className="text-center text-muted my-3">Belum ada data pengeluaran di periode ini.</div>
+          {/* Breakdown Tables */}
+          <Row gutter={[24, 24]}>
+            {/* Pendapatan Table */}
+            <Col xs={24} lg={12}>
+              <Card className="shadow-sm border-0 h-100" style={{borderRadius: '8px'}} title={<span style={{color: '#28c76f'}}><Icon.TrendingUp size={18} className="me-2"/>Rincian Pendapatan</span>}>
+                <Table 
+                  columns={columns} 
+                  dataSource={revenueData} 
+                  rowKey="id" 
+                  pagination={false}
+                  size="middle"
+                  summary={() => (
+                    <Table.Summary.Row style={{background: '#f8f9fa', fontWeight: 'bold'}}>
+                      <Table.Summary.Cell colSpan={2} index={0} className="text-end">Total Pendapatan:</Table.Summary.Cell>
+                      <Table.Summary.Cell index={1} align="right" className="text-success">Rp {new Intl.NumberFormat('id-ID').format(summary.grossIncome)}</Table.Summary.Cell>
+                    </Table.Summary.Row>
                   )}
-                </Card>
-              </Col>
-              
-              <Col xs={24} lg={12}>
-                <Card bordered={false} className="shadow-sm h-100" style={{borderRadius: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center'}}>
-                    <DollarCircleOutlined style={{fontSize: '80px', color: '#e0e0e0', marginBottom: '20px'}} />
-                    <Title level={4} className="text-muted">Analisis Keuangan</Title>
-                    <Text type="secondary" className="text-center px-4">
-                      Dasbor ini menghitung secara otomatis seluruh penjualan kotor dari transaksi yang berstatus sukses, 
-                      dikurangi dengan seluruh beban biaya yang Anda catat di menu Pengeluaran.
-                    </Text>
-                </Card>
-              </Col>
-            </Row>
+                />
+              </Card>
+            </Col>
 
-          </>
-        )}
+            {/* Beban Table */}
+            <Col xs={24} lg={12}>
+              <Card className="shadow-sm border-0 h-100" style={{borderRadius: '8px'}} title={<span style={{color: '#ea5455'}}><Icon.TrendingDown size={18} className="me-2"/>Rincian Beban</span>}>
+                <Table 
+                  columns={columns} 
+                  dataSource={expenseData} 
+                  rowKey="id" 
+                  pagination={false}
+                  size="middle"
+                  summary={() => (
+                    <Table.Summary.Row style={{background: '#f8f9fa', fontWeight: 'bold'}}>
+                      <Table.Summary.Cell colSpan={2} index={0} className="text-end">Total Beban:</Table.Summary.Cell>
+                      <Table.Summary.Cell index={1} align="right" className="text-danger">Rp {new Intl.NumberFormat('id-ID').format(summary.totalExpenses)}</Table.Summary.Cell>
+                    </Table.Summary.Row>
+                  )}
+                />
+              </Card>
+            </Col>
+          </Row>
+        </Spin>
       </div>
     </div>
   );

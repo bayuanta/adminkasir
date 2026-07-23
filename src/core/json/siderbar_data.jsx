@@ -50,7 +50,9 @@ export const SidebarData = [
             { label: "Buku Besar (COA)", link: "/coa", icon: <Icon.Book />, showSubRoute: false, submenu: false },
             { label: "Input Jurnal", link: "/journal-entry", icon: <Icon.Edit3 />, showSubRoute: false, submenu: false },
             { label: "Laporan Buku Besar", link: "/general-ledger", icon: <Icon.FileText />, showSubRoute: false, submenu: false },
-            { label: "Laba / Rugi", link: "/profit-loss", icon: <Icon.PieChart />, showSubRoute: false, submenu: false },
+            { label: "Neraca Saldo", link: "/trial-balance", icon: <Icon.List />, showSubRoute: false, submenu: false },
+            { label: "Laba / Rugi (P&L)", link: "/profit-loss", icon: <Icon.PieChart />, showSubRoute: false, submenu: false },
+            { label: "Neraca Keuangan", link: "/balance-sheet", icon: <Icon.Columns />, showSubRoute: false, submenu: false },
             { label: "Arus Kas", link: "/cash-flow", icon: <Icon.Repeat />, showSubRoute: false, submenu: false }
         ]
     },
