@@ -203,7 +203,7 @@ const ProductList = () => {
     {
       title: "Status",
       render: () => (
-        <span className="badges bg-lightgreen">Aktif</span>
+        <span>Aktif</span>
       ),
     },
     {
