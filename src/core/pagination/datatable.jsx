@@ -4,10 +4,9 @@ import React,{useState} from "react";
 import { Table } from "antd";
 import { onShowSizeChange } from "./pagination";
 
-const Datatable = ({ props, columns, dataSource }) => {
+const Datatable = ({ columns, dataSource, ...rest }) => {
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const onSelectChange = (newSelectedRowKeys) => {
-    console.log("selectedRowKeys changed: ", selectedRowKeys);
     setSelectedRowKeys(newSelectedRowKeys);
   };
 
@@ -17,13 +16,13 @@ const Datatable = ({ props, columns, dataSource }) => {
   };
   return (
     <Table
-      key={props}
+      {...rest}
       className="table datanew dataTable no-footer"
       rowSelection={rowSelection}
       columns={columns}
       dataSource={dataSource}
       size="small"
-      rowKey={(record) => record.id}
+      rowKey={(record) => record.id || record.key}
     />
   );
 };
