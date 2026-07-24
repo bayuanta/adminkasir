@@ -17,7 +17,6 @@ const Datatable = ({ columns, dataSource, ...rest }) => {
   return (
     <Table
       {...rest}
-      className="table datanew dataTable no-footer"
       rowSelection={rowSelection}
       columns={columns}
       dataSource={dataSource}
