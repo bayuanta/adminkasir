@@ -153,6 +153,7 @@ import AttendanceAdmin from "../feature-module/hrm/attendanceadmin";
 import Payslip from "../feature-module/hrm/payslip";
 import Holidays from "../feature-module/hrm/holidays";
 import SalesList from "../feature-module/sales/saleslist";
+import TransactionHistory from "../feature-module/sales/transactionhistory";
 import InvoiceReport from "../feature-module/sales/invoicereport";
 import SalesReturn from "../feature-module/sales/salesreturn";
 import QuotationList from "../feature-module/sales/quotationlist";
@@ -1278,6 +1279,13 @@ export const publicRoutes = [
     path: routes.saleslist,
     name: "saleslist",
     element: <SalesList />,
+    route: Route,
+  },
+  {
+    id: 1021,
+    path: routes.transactionhistory,
+    name: "transactionhistory",
+    element: <TransactionHistory />,
     route: Route,
   },
   {

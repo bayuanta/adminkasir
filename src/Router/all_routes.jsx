@@ -135,6 +135,7 @@ export const all_routes = {
   localizationsettings: "/localization-settings",
   prefixes: "/prefixes",
   preference: "/preference",
+  transactionhistory: "/transaction-history",
   saleslist: "/sales-list",
   invoicereport: "/invoice-report",
   salesreturn: "/sales-returns",
