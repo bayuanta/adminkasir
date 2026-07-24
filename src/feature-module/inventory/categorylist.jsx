@@ -22,7 +22,7 @@ const CategoryList = () => {
     {
       title: "Kode Sistem",
       dataIndex: "code",
-      render: (text) => <span className="badges bg-lightyellow">{text}</span>,
+      render: (text) => <span>{text}</span>,
       sorter: (a, b) => a.code.localeCompare(b.code),
     },
     {
@@ -33,7 +33,7 @@ const CategoryList = () => {
     {
       title: "Status",
       render: () => (
-        <span className="badges bg-lightgreen">Aktif</span>
+        <span>Aktif</span>
       ),
     },
   ];
