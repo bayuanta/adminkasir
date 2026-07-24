@@ -155,12 +155,20 @@ const ProductList = () => {
     {
       title: "Foto",
       dataIndex: "image_url",
+      width: 80,
       render: (text, record) => (
-        <img 
-          src={record.image_url || "https://via.placeholder.com/40"} 
-          alt={record.name} 
-          style={{width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #eaeaea'}} 
-        />
+        <div style={{ width: '40px', height: '40px', overflow: 'hidden', borderRadius: '6px', border: '1px solid #eaeaea', backgroundColor: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {record.image_url ? (
+            <img 
+              src={record.image_url} 
+              alt="img" 
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
+          ) : (
+            <span style={{ fontSize: '10px', color: '#ccc' }}>No Pic</span>
+          )}
+        </div>
       )
     },
     {
