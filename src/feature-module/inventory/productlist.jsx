@@ -261,16 +261,7 @@ const ProductList = () => {
         <div className="card table-list-card">
           <div className="card-body">
             <div className="table-responsive">
-              {loading ? (
-                <div className="text-center p-5">
-                  <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                  </div>
-                  <h6 className="mt-3">Mengambil data dari Supabase...</h6>
-                </div>
-              ) : (
-                <Table columns={columns} dataSource={filteredProducts} />
-              )}
+              <Table columns={columns} dataSource={filteredProducts} loading={loading} />
             </div>
           </div>
         </div>
