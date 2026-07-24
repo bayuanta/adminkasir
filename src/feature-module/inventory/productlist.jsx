@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
 import { PlusCircle, RotateCcw, Edit, Trash2 } from "feather-icons-react/build/IconComponents";
-import { Popconfirm, message, Select, Modal, Form, Input, InputNumber } from "antd";
+import { Popconfirm, message, Select, Modal, Form, Input, InputNumber, Upload } from "antd";
 const { Option } = Select;
 import Table from "../../core/pagination/datatable";
 import { supabase } from "../../supabaseClient";
@@ -17,6 +17,8 @@ const ProductList = () => {
   const [branches, setBranches] = useState([]);
   const [form] = Form.useForm();
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [previewImage, setPreviewImage] = useState("");
 
   useEffect(() => {
     fetchProducts();
@@ -31,6 +33,8 @@ const ProductList = () => {
 
   const handleAddClick = () => {
     setEditingProduct(null);
+    setImageFile(null);
+    setPreviewImage("");
     form.resetFields();
     if (branches.length > 0) {
       form.setFieldsValue({ branch_id: branches[0].id });
@@ -40,6 +44,8 @@ const ProductList = () => {
 
   const handleEditClick = (record) => {
     setEditingProduct(record);
+    setImageFile(null);
+    setPreviewImage(record.image_url || "");
     form.setFieldsValue({
       name: record.name,
       category: record.category,
@@ -53,12 +59,36 @@ const ProductList = () => {
   const handleModalSubmit = async (values) => {
     setSubmitLoading(true);
     try {
+      let uploadedImageUrl = previewImage;
+
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `products/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(filePath, imageFile);
+
+        if (uploadError) {
+          throw new Error('Gagal mengunggah gambar. Pastikan bucket "product-images" sudah dibuat dan disetel public di Storage Supabase.');
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(filePath);
+
+        uploadedImageUrl = publicUrlData.publicUrl;
+      }
+
+      const payload = { ...values, image_url: uploadedImageUrl };
+
       if (editingProduct) {
-        const { error } = await supabase.from('products').update(values).eq('id', editingProduct.id);
+        const { error } = await supabase.from('products').update(payload).eq('id', editingProduct.id);
         if (error) throw error;
         message.success('Produk berhasil diubah');
       } else {
-        const { error } = await supabase.from('products').insert([values]);
+        const { error } = await supabase.from('products').insert([payload]);
         if (error) throw error;
         message.success('Produk berhasil ditambahkan');
       }
@@ -66,7 +96,7 @@ const ProductList = () => {
       fetchProducts();
     } catch (err) {
       console.error(err);
-      message.error('Gagal menyimpan produk');
+      message.error(err.message || 'Gagal menyimpan produk');
     } finally {
       setSubmitLoading(false);
     }
@@ -95,6 +125,8 @@ const ProductList = () => {
           name,
           category,
           price,
+          sku,
+          image_url,
           branch_id,
           branches (
             name
@@ -252,6 +284,34 @@ const ProductList = () => {
         footer={null}
       >
         <Form form={form} layout="vertical" onFinish={handleModalSubmit}>
+          <div className="row mb-3">
+            <div className="col-12">
+              <label className="form-label d-block mb-2">Foto Produk / Tiket (Opsional)</label>
+              <div className="d-flex align-items-center gap-3">
+                {previewImage && (
+                  <img src={previewImage} alt="Preview" style={{width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #ddd'}} />
+                )}
+                <Upload
+                  beforeUpload={(file) => {
+                    const isImage = file.type.startsWith('image/');
+                    if (!isImage) {
+                      message.error('Hanya bisa mengunggah file gambar!');
+                      return Upload.LIST_IGNORE;
+                    }
+                    setImageFile(file);
+                    setPreviewImage(URL.createObjectURL(file));
+                    return false;
+                  }}
+                  showUploadList={false}
+                >
+                  <button type="button" className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2">
+                    <i className="fas fa-upload"></i> Pilih Gambar
+                  </button>
+                </Upload>
+              </div>
+            </div>
+          </div>
+
           <Form.Item label="Nama Produk / Tiket" name="name" rules={[{ required: true, message: 'Harap isi nama produk!' }]}>
             <Input placeholder="Contoh: Nasi Goreng Spesial" />
           </Form.Item>
