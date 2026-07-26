@@ -31,6 +31,17 @@ const ExpensesList = () => {
   useEffect(() => {
     fetchExpenses();
     fetchAccounts();
+
+    const channel = supabase
+      .channel('expenses-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => {
+        fetchExpenses();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStore]);
 
@@ -151,7 +162,10 @@ const ExpensesList = () => {
       title: 'Tanggal',
       dataIndex: 'expense_date',
       key: 'expense_date',
-      render: (text) => text ? dayjs(text).format('DD MMM YYYY') : '-'
+      render: (text, record) => {
+        const val = record.expense_date || record.created_at;
+        return val ? dayjs(val).format('DD MMM YYYY') : '-';
+      }
     },
     {
       title: 'Kategori',
