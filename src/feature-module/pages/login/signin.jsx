@@ -23,20 +23,13 @@ const Signin = () => {
     setErrorMessage("");
 
     try {
-      // Attempt real Supabase Auth sign in
+      // Real Supabase Auth sign in
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
+        email: email.trim(),
+        password: password.trim(),
       });
 
       if (error) {
-        // Fallback for demo/testing if user enters default admin credentials
-        if (email.toLowerCase().includes("admin") || email === "admin@poskasir.com") {
-          loginDemo(email);
-          setLoading(false);
-          navigate(route.dashboard);
-          return;
-        }
         setErrorMessage(error.message === "Invalid login credentials" 
           ? "Email atau kata sandi tidak cocok. Silakan periksa kembali." 
           : error.message);
@@ -44,10 +37,8 @@ const Signin = () => {
         navigate(route.dashboard);
       }
     } catch (err) {
-      console.error("Unexpected login error:", err);
-      // Fallback for offline or test mode
-      loginDemo(email);
-      navigate(route.dashboard);
+      console.error("Login error:", err);
+      setErrorMessage("Gagal menghubungkan ke server Supabase. Silakan periksa jaringan Anda.");
     } finally {
       setLoading(false);
     }
@@ -302,7 +293,7 @@ const Signin = () => {
                             <input
                               type="email"
                               className="form-control bg-transparent border-0 py-2.5"
-                              placeholder="admin@poskasir.com"
+                              placeholder="admin@dewaemas.com"
                               value={email}
                               onChange={(e) => setEmail(e.target.value)}
                               required
