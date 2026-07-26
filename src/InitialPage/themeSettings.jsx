@@ -1,5 +1,5 @@
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from "react";
-import { Settings } from "react-feather";
 import { useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import { setLayoutChange } from "../core/redux/action";
