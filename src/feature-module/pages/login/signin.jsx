@@ -293,7 +293,7 @@ const Signin = () => {
                             <input
                               type="email"
                               className="form-control bg-transparent border-0 py-2.5"
-                              placeholder="admin@dewaemas.com"
+                              placeholder="bumdes.kalem@gmail.com"
                               value={email}
                               onChange={(e) => setEmail(e.target.value)}
                               required
