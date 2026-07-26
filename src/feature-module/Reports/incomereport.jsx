@@ -19,6 +19,16 @@ const IncomeReport = () => {
 
   useEffect(() => {
     fetchIncomeData();
+
+    const channel = supabase
+      .channel('income-report-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchIncomeData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => fetchIncomeData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStore]);
 

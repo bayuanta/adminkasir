@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
-import { DatePicker, Table, Card, Typography, Spin, message, Button } from 'antd';
+import { DatePicker, Table, Card, Typography, message, Button, Tag } from 'antd';
 import { supabase } from "../../supabaseClient";
 import { StoreContext } from "../../core/context/StoreContext";
 import dayjs from 'dayjs';
@@ -13,14 +13,23 @@ const TrialBalance = () => {
   
   // Date (As Of Date)
   const [asOfDate, setAsOfDate] = useState(dayjs());
-  
   const [tbData, setTbData] = useState([]);
   const [totals, setTotals] = useState({ debit: 0, credit: 0 });
 
   useEffect(() => {
     fetchTrialBalance();
+
+    const channel = supabase
+      .channel('trial-balance-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchTrialBalance())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => fetchTrialBalance())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStore]);
+  }, [asOfDate, selectedStore]);
 
   const fetchTrialBalance = async () => {
     if (!asOfDate) {
@@ -30,77 +39,80 @@ const TrialBalance = () => {
     try {
       const endDateIso = asOfDate.endOf('day').toISOString();
 
-      // 1. Fetch ALL COA
-      const { data: coaData, error: coaError } = await supabase
-        .from('coa')
-        .select('id, account_code, account_name, account_type')
-        .eq('is_active', true)
-        .order('account_code');
-
-      if (coaError) throw coaError;
-
-      // 2. Fetch Journal Lines up to the date
-      let query = supabase
-        .from('journal_lines')
-        .select('account_id, debit, credit, journal_entries!inner(entry_date, branch_id)')
-        .lte('journal_entries.entry_date', endDateIso);
+      let trxQuery = supabase.from('transactions').select('total_amount, payment_method').lte('created_at', endDateIso);
+      let expQuery = supabase.from('expenses').select('amount, category, expense_category').lte('created_at', endDateIso);
 
       if (selectedStore) {
-        query = query.eq('journal_entries.branch_id', selectedStore);
+        trxQuery = trxQuery.eq('branch_id', selectedStore);
+        expQuery = expQuery.eq('branch_id', selectedStore);
       }
 
-      const { data: lines, error: linesError } = await query;
-      if (linesError) throw linesError;
+      const { data: trxs } = await trxQuery;
+      const { data: exps } = await expQuery;
 
-      // 3. Calculate balances per account
-      const balMap = {};
-      (lines || []).forEach(line => {
-        const accId = line.account_id;
-        if (!balMap[accId]) {
-          balMap[accId] = { totalDebit: 0, totalCredit: 0 };
-        }
-        balMap[accId].totalDebit += (Number(line.debit) || 0);
-        balMap[accId].totalCredit += (Number(line.credit) || 0);
+      let totalSales = 0;
+      let cashSales = 0;
+      let qrisSales = 0;
+
+      (trxs || []).forEach(t => {
+        const amt = t.total_amount || 0;
+        totalSales += amt;
+        if (t.payment_method === 'cash') cashSales += amt;
+        else qrisSales += amt;
       });
 
-      let grandTotalDebit = 0;
-      let grandTotalCredit = 0;
+      let totalExp = 0;
+      (exps || []).forEach(e => {
+        totalExp += (e.amount || 0);
+      });
 
-      const formattedData = coaData.map(coa => {
-        const b = balMap[coa.id] || { totalDebit: 0, totalCredit: 0 };
-        let debitBal = 0;
-        let creditBal = 0;
-
-        if (coa.account_type === 'Asset' || coa.account_type === 'Expense') {
-          const bal = b.totalDebit - b.totalCredit;
-          if (bal > 0) debitBal = bal;
-          else if (bal < 0) creditBal = Math.abs(bal);
-        } else {
-          // Liability, Equity, Revenue
-          const bal = b.totalCredit - b.totalDebit;
-          if (bal > 0) creditBal = bal;
-          else if (bal < 0) debitBal = Math.abs(bal);
+      const rows = [
+        {
+          key: '10100',
+          account_code: '10100',
+          account_name: 'Kas Tunai POS Utama',
+          account_type: 'Asset (Aktiva)',
+          debit: Math.max(0, cashSales - totalExp),
+          credit: 0
+        },
+        {
+          key: '10200',
+          account_code: '10200',
+          account_name: 'Bank / QRIS Rekening Pembayaran',
+          account_type: 'Asset (Aktiva)',
+          debit: qrisSales,
+          credit: 0
+        },
+        {
+          key: '40100',
+          account_code: '40100',
+          account_name: 'Pendapatan Penjualan Kasir POS',
+          account_type: 'Revenue (Pendapatan)',
+          debit: 0,
+          credit: totalSales
+        },
+        {
+          key: '50100',
+          account_code: '50100',
+          account_name: 'Beban Operasional Kasir',
+          account_type: 'Expense (Beban)',
+          debit: totalExp,
+          credit: 0
         }
+      ];
 
-        grandTotalDebit += debitBal;
-        grandTotalCredit += creditBal;
+      let gDebit = 0;
+      let gCredit = 0;
+      rows.forEach(r => {
+        gDebit += r.debit;
+        gCredit += r.credit;
+      });
 
-        return {
-          id: coa.id,
-          code: coa.account_code,
-          name: coa.account_name,
-          type: coa.account_type,
-          debit: debitBal,
-          credit: creditBal
-        };
-      }).filter(item => item.debit !== 0 || item.credit !== 0); // Hanya tampilkan yang ada saldonya
-
-      setTbData(formattedData);
-      setTotals({ debit: grandTotalDebit, credit: grandTotalCredit });
-
+      setTbData(rows);
+      setTotals({ debit: gDebit, credit: gCredit });
     } catch (err) {
-      console.error("Error fetching Trial Balance:", err);
-      message.error("Gagal memuat Neraca Saldo");
+      console.error("Error fetching trial balance:", err);
+      message.error("Gagal memuat neraca saldo.");
     } finally {
       setLoading(false);
     }
@@ -109,109 +121,97 @@ const TrialBalance = () => {
   const columns = [
     {
       title: 'Kode Akun',
-      dataIndex: 'code',
-      key: 'code',
-      width: '15%',
+      dataIndex: 'account_code',
+      key: 'account_code',
+      render: (code) => <Tag color="blue">{code}</Tag>
     },
     {
-      title: 'Nama Akun',
-      dataIndex: 'name',
-      key: 'name',
-      width: '45%',
-      render: (text, record) => (
-        <div>
-          <span className="fw-bold d-block">{text}</span>
-          <span className="text-muted" style={{fontSize: '11px'}}>{record.type}</span>
-        </div>
-      )
+      title: 'Nama Akun Rekening',
+      dataIndex: 'account_name',
+      key: 'account_name',
+      render: (text) => <span className="fw-bold text-dark">{text}</span>
     },
     {
-      title: 'Debit (Rp)',
+      title: 'Tipe Akun',
+      dataIndex: 'account_type',
+      key: 'account_type',
+      render: (text) => <span className="badge bg-light text-secondary border">{text}</span>
+    },
+    {
+      title: 'Debet (Rp)',
       dataIndex: 'debit',
       key: 'debit',
       align: 'right',
-      render: (val) => val > 0 ? <span className="text-primary fw-bold">{new Intl.NumberFormat('id-ID').format(val)}</span> : '-'
+      render: (val) => val > 0 ? <span className="text-success fw-bold">Rp {val.toLocaleString('id-ID')}</span> : '-'
     },
     {
       title: 'Kredit (Rp)',
       dataIndex: 'credit',
       key: 'credit',
       align: 'right',
-      render: (val) => val > 0 ? <span className="text-danger fw-bold">{new Intl.NumberFormat('id-ID').format(val)}</span> : '-'
+      render: (val) => val > 0 ? <span className="text-danger fw-bold">Rp {val.toLocaleString('id-ID')}</span> : '-'
     }
   ];
+
+  const isBalanced = totals.debit === totals.credit;
 
   return (
     <div className="page-wrapper">
       <div className="content">
-        
-        {/* Header Section */}
-        <div className="page-header mb-4">
-          <div className="row align-items-center">
-            <div className="col-lg-6">
-              <h3 className="page-title fw-bold" style={{color: '#2c3e50'}}>Neraca Saldo (Trial Balance)</h3>
-              <h6 className="text-muted" style={{fontSize: '13px'}}>Daftar saldo akhir seluruh buku besar untuk validasi kesimbangan (Balance)</h6>
-            </div>
-            <div className="col-lg-6 d-flex justify-content-end gap-2 mt-3 mt-lg-0">
-              <DatePicker 
-                value={asOfDate} 
-                onChange={setAsOfDate}
-                format="DD MMM YYYY"
-                allowClear={false}
-                style={{height: '38px'}}
-              />
-              <Button type="primary" onClick={fetchTrialBalance} loading={loading} style={{background: '#ff9f43', borderColor: '#ff9f43', height: '38px', fontWeight: 'bold'}}>
-                <Icon.Filter size={16} className="me-2"/> Tampilkan
-              </Button>
-            </div>
+        <div className="page-header d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <Title level={3} style={{ margin: 0 }}>Laporan Neraca Saldo (Trial Balance)</Title>
+            <Text type="secondary">Keseimbangan saldo debet & kredit seluruh akun per tanggal aktif</Text>
           </div>
+          <Button icon={<Icon.RefreshCw size={16} />} onClick={fetchTrialBalance}>
+            Refresh Neraca Saldo
+          </Button>
         </div>
 
-        <Spin spinning={loading}>
-          <Card className="shadow-sm border-0 mb-4" style={{borderRadius: '8px'}}>
-            <div className="text-center mb-4">
-              <Title level={4} className="m-0" style={{color: '#2c3e50'}}>Neraca Saldo</Title>
-              <Text type="secondary">Per Tanggal: {asOfDate.format('DD MMMM YYYY')}</Text>
+        <Card className="mb-4 shadow-sm border-0">
+          <div className="row align-items-center">
+            <div className="col-md-4">
+              <label className="form-label fw-bold">Per Tanggal (As of Date):</label>
+              <DatePicker
+                style={{ width: '100%' }}
+                value={asOfDate}
+                onChange={setAsOfDate}
+                format="DD/MM/YYYY"
+              />
             </div>
-
-            <Table 
-              columns={columns} 
-              dataSource={tbData} 
-              rowKey="id" 
-              pagination={false}
-              bordered
-              size="middle"
-              summary={() => (
-                <Table.Summary.Row style={{background: '#f8f9fa', fontWeight: 'bold'}}>
-                  <Table.Summary.Cell colSpan={2} index={0} className="text-end">Total Keseluruhan:</Table.Summary.Cell>
-                  <Table.Summary.Cell index={1} align="right">
-                    <span className={totals.debit !== totals.credit ? 'text-danger' : 'text-success'}>
-                      {new Intl.NumberFormat('id-ID').format(totals.debit)}
-                    </span>
-                  </Table.Summary.Cell>
-                  <Table.Summary.Cell index={2} align="right">
-                    <span className={totals.debit !== totals.credit ? 'text-danger' : 'text-success'}>
-                      {new Intl.NumberFormat('id-ID').format(totals.credit)}
-                    </span>
-                  </Table.Summary.Cell>
-                </Table.Summary.Row>
+            <div className="col-md-8 text-end">
+              <span className="me-3 fs-14 fw-bold">Status Neraca:</span>
+              {isBalanced ? (
+                <Tag color="success" className="p-2 fs-13">SEIMBANG (DEBIT = KREDIT)</Tag>
+              ) : (
+                <Tag color="error" className="p-2 fs-13">TIDAK SEIMBANG</Tag>
               )}
-            />
+            </div>
+          </div>
+        </Card>
 
-            {totals.debit !== totals.credit && (
-              <div className="alert alert-danger mt-3 mb-0" role="alert">
-                <Icon.AlertTriangle size={16} className="me-2"/>
-                <strong>Peringatan!</strong> Total Debit dan Kredit tidak seimbang (Selisih: Rp {new Intl.NumberFormat('id-ID').format(Math.abs(totals.debit - totals.credit))}). Silakan periksa entri jurnal Anda.
-              </div>
+        <Card className="shadow-sm border-0">
+          <Table
+            columns={columns}
+            dataSource={tbData}
+            rowKey="key"
+            loading={loading}
+            pagination={false}
+            summary={() => (
+              <Table.Summary.Row style={{ backgroundColor: '#F8FAFC' }}>
+                <Table.Summary.Cell index={0} colSpan={3}>
+                  <span className="fw-bold fs-15 text-dark">TOTAL KESELURUHAN (TOTAL SALDO)</span>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={1} align="right">
+                  <span className="fw-bold fs-15 text-success">Rp {totals.debit.toLocaleString('id-ID')}</span>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={2} align="right">
+                  <span className="fw-bold fs-15 text-danger">Rp {totals.credit.toLocaleString('id-ID')}</span>
+                </Table.Summary.Cell>
+              </Table.Summary.Row>
             )}
-            {totals.debit === totals.credit && totals.debit > 0 && (
-              <div className="alert alert-success mt-3 mb-0" role="alert">
-                <Icon.CheckCircle size={16} className="me-2"/>
-                Neraca Saldo Anda <strong>Seimbang (Balanced)</strong>.
-              </div>
-            )}
-          </Card>
-        </Spin>
+          />
+        </Card>
       </div>
     </div>
   );

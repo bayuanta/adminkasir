@@ -26,6 +26,17 @@ const AccountsList = () => {
   useEffect(() => {
     fetchAccounts();
     fetchCOA();
+
+    const channel = supabase
+      .channel('accounts-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => fetchAccounts())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => fetchAccounts())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'accounts' }, () => fetchAccounts())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStore]);
 
@@ -33,8 +44,8 @@ const AccountsList = () => {
     try {
       let query = supabase.from('coa').select('*').eq('account_type', 'Asset').eq('is_active', true);
       if (selectedStore) query = query.or(`branch_id.eq.${selectedStore},branch_id.is.null`);
-      const { data, error } = await query;
-      if (!error) setCoasList(data || []);
+      const { data } = await query;
+      setCoasList(data || []);
     } catch (err) {
       console.error("Error fetching COA:", err);
     }
@@ -43,21 +54,76 @@ const AccountsList = () => {
   const fetchAccounts = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('accounts').select('*').order('account_type', { ascending: true });
-      
+      let accQuery = supabase.from('accounts').select('*').order('account_type', { ascending: true });
+      let trxQuery = supabase.from('transactions').select('total_amount, payment_method, branch_id');
+      let expQuery = supabase.from('expenses').select('amount, branch_id');
+
       if (selectedStore) {
-        query = query.eq('branch_id', selectedStore);
+        accQuery = accQuery.eq('branch_id', selectedStore);
+        trxQuery = trxQuery.eq('branch_id', selectedStore);
+        expQuery = expQuery.eq('branch_id', selectedStore);
       }
-      
-      const { data, error } = await query;
-      if (error) {
-        console.error("Error fetching accounts:", error);
-        setAccounts([]);
+
+      const { data: accData } = await accQuery;
+      const { data: trxData } = await trxQuery;
+      const { data: expData } = await expQuery;
+
+      let cashSales = 0;
+      let qrisSales = 0;
+      (trxData || []).forEach(t => {
+        const amt = t.total_amount || 0;
+        if (t.payment_method === 'cash') cashSales += amt;
+        else qrisSales += amt;
+      });
+
+      let totalExp = 0;
+      (expData || []).forEach(e => {
+        totalExp += (e.amount || 0);
+      });
+
+      // Calculate live calculated balance per account type/name
+      const processed = (accData || []).map(acc => {
+        const nameLower = (acc.account_name || '').toLowerCase();
+        let currentBal = acc.balance || 0;
+
+        if (nameLower.includes('kas') || nameLower.includes('tunai') || acc.account_type === 'Kas & Bank') {
+          currentBal = (acc.balance || 0) + cashSales - totalExp;
+        } else if (nameLower.includes('qris') || nameLower.includes('bank')) {
+          currentBal = (acc.balance || 0) + qrisSales;
+        }
+
+        return {
+          ...acc,
+          liveBalance: currentBal
+        };
+      });
+
+      // If no account row exists yet, provide default live Kas & QRIS accounts
+      if (processed.length === 0) {
+        setAccounts([
+          {
+            id: 'acc-kas-1',
+            account_name: 'Kas Tunai POS Utama',
+            account_number: '101-01',
+            account_type: 'Kas & Bank',
+            balance: 0,
+            liveBalance: cashSales - totalExp
+          },
+          {
+            id: 'acc-qris-1',
+            account_name: 'Bank / QRIS Rekening Pembayaran',
+            account_number: '102-01',
+            account_type: 'Kas & Bank',
+            balance: 0,
+            liveBalance: qrisSales
+          }
+        ]);
       } else {
-        setAccounts(data || []);
+        setAccounts(processed);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching accounts:", err);
+      setAccounts([]);
     } finally {
       setLoading(false);
     }
@@ -92,7 +158,7 @@ const AccountsList = () => {
       fetchAccounts();
     } catch (err) {
       console.error("Error deleting:", err);
-      alert(`Gagal menghapus data.\n\nPesan Error: ${err.message || 'Unknown Error'}`);
+      alert(`Gagal menghapus data: ${err.message}`);
     }
   };
 
@@ -105,7 +171,7 @@ const AccountsList = () => {
       account_number: accountNumber,
       account_type: accountType,
       balance: balance,
-      coa_id: coaId || null,
+      coa_id: coaId,
       branch_id: selectedStore || null
     };
 
@@ -121,7 +187,7 @@ const AccountsList = () => {
       fetchAccounts();
     } catch (err) {
       console.error("Error saving account:", err);
-      alert(`Gagal menyimpan data!\n\nPesan Error: ${err.message || err.details || err.hint || 'Pastikan Anda sudah menjalankan script SQL CREATE TABLE'}`);
+      alert(`Gagal menyimpan data!\n\nPesan Error: ${err.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -129,12 +195,10 @@ const AccountsList = () => {
 
   const columns = [
     {
-      title: 'Tipe Akun',
-      dataIndex: 'account_type',
-      key: 'account_type',
-      render: (text) => (
-        <span className="badge bg-light text-dark border">{text}</span>
-      )
+      title: 'Nama Akun / Rekening',
+      dataIndex: 'account_name',
+      key: 'account_name',
+      render: (text) => <span className="fw-bold text-dark">{text}</span>
     },
     {
       title: 'Kode / No. Rekening',
@@ -143,18 +207,24 @@ const AccountsList = () => {
       render: (text) => text || '-'
     },
     {
-      title: 'Nama Akun',
-      dataIndex: 'account_name',
-      key: 'account_name',
-      render: (text) => <span className="fw-bold">{text}</span>
+      title: 'Tipe Akun',
+      dataIndex: 'account_type',
+      key: 'account_type',
+      render: (text) => <span className="badge bg-light text-primary border">{text || 'Kas & Bank'}</span>
     },
     {
-      title: 'Saldo Saat Ini',
+      title: 'Saldo Awal',
       dataIndex: 'balance',
       key: 'balance',
+      render: (val) => `Rp ${(val || 0).toLocaleString('id-ID')}`
+    },
+    {
+      title: 'Saldo Real-Time Saat Ini',
+      dataIndex: 'liveBalance',
+      key: 'liveBalance',
       render: (val) => (
-        <span className={val < 0 ? "fw-bold text-danger" : "fw-bold text-success"}>
-          Rp {new Intl.NumberFormat('id-ID').format(val || 0)}
+        <span className={`fw-bold fs-14 ${(val || 0) >= 0 ? 'text-success' : 'text-danger'}`}>
+          Rp {(val || 0).toLocaleString('id-ID')}
         </span>
       )
     },
@@ -163,140 +233,82 @@ const AccountsList = () => {
       key: 'action',
       render: (_, record) => (
         <Space size="middle">
-          <Button type="text" className="text-primary p-0" onClick={() => openEditModal(record)}>
-            <Icon.Edit size={16} />
-          </Button>
-          <Popconfirm title="Hapus akun ini?" onConfirm={() => handleDelete(record.id)} okText="Ya" cancelText="Batal">
-            <Button type="text" className="text-danger p-0">
-              <Icon.Trash2 size={16} />
-            </Button>
+          <Button type="text" icon={<Icon.Edit size={16} />} onClick={() => openEditModal(record)} />
+          <Popconfirm title="Yakin ingin menghapus rekening ini?" onConfirm={() => handleDelete(record.id)} okText="Ya" cancelText="Batal">
+            <Button type="text" danger icon={<Icon.Trash2 size={16} />} />
           </Popconfirm>
         </Space>
-      ),
-    },
+      )
+    }
   ];
 
   return (
     <div className="page-wrapper">
       <div className="content">
-        <div className="page-header">
-          <div className="row align-items-center w-100">
-            <div className="col-lg-10 col-sm-12">
-              <h3 className="page-title fw-bold" style={{color: '#2c3e50'}}>Rekening & Kas</h3>
-              <h6 className="text-muted" style={{fontSize: '13px'}}>Kelola kas laci, rekening bank, dan dompet digital</h6>
-            </div>
-            <div className="col-lg-2 col-sm-12 d-flex justify-content-end gap-2">
-              <button className="btn btn-outline-secondary d-flex align-items-center justify-content-center p-2" onClick={fetchAccounts}>
-                <Icon.RefreshCcw size={16}/>
-              </button>
-              <button className="btn text-white fw-bold d-flex align-items-center justify-content-center gap-2" style={{background: '#ff9f43', borderRadius: '6px'}} onClick={openAddModal}>
-                <Icon.PlusCircle size={16} />
-                Tambah Akun
-              </button>
-            </div>
+        <div className="page-header d-flex justify-content-between align-items-center">
+          <div>
+            <h4>Rekening & Kas Keuangan</h4>
+            <h6>Kelola saldo kas tunai, rekening bank, & saldo real-time POS</h6>
+          </div>
+          <Button type="primary" icon={<Icon.Plus size={16} />} onClick={openAddModal}>
+            Tambah Rekening Baru
+          </Button>
+        </div>
+
+        <div className="card border-0 shadow-sm">
+          <div className="card-body">
+            <Table
+              columns={columns}
+              dataSource={accounts}
+              rowKey="id"
+              loading={loading}
+              pagination={{ pageSize: 10 }}
+            />
           </div>
         </div>
 
-        <div className="row">
-          <div className="col-lg-12">
-            <div className="card bg-white shadow-sm border-0" style={{borderRadius: '8px'}}>
-              <div className="card-body">
-                <Table 
-                  columns={columns} 
-                  dataSource={accounts} 
-                  rowKey="id" 
-                  loading={loading}
-                  pagination={{ pageSize: 10 }}
-                />
-              </div>
-            </div>
+        {/* Modal Form Add/Edit */}
+        <Modal
+          title={isEditMode ? "Edit Rekening" : "Tambah Rekening Baru"}
+          open={isModalVisible}
+          onOk={handleSave}
+          confirmLoading={submitting}
+          onCancel={() => setIsModalVisible(false)}
+          okText="Simpan"
+          cancelText="Batal"
+        >
+          <div className="mb-3 mt-3">
+            <label className="form-label">Nama Akun / Rekening *</label>
+            <Input placeholder="Contoh: Kas Loket Tiket / Bank BCA POS" value={accountName} onChange={(e) => setAccountName(e.target.value)} />
           </div>
-        </div>
+          <div className="mb-3">
+            <label className="form-label">Nomor Rekening / Kode</label>
+            <Input placeholder="Contoh: 101-01" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Tipe Akun</label>
+            <Select style={{ width: '100%' }} value={accountType} onChange={setAccountType}>
+              <Select.Option value="Kas & Bank">Kas & Bank</Select.Option>
+              <Select.Option value="Piutang Usaha">Piutang Usaha</Select.Option>
+              <Select.Option value="Aktiva Lancar">Aktiva Lancar</Select.Option>
+            </Select>
+          </div>
+          <div className="mb-3">
+            <label className="form-label">Saldo Awal (Rp)</label>
+            <InputNumber style={{ width: '100%' }} value={balance} onChange={(v) => setBalance(v || 0)} formatter={value => `Rp ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')} parser={value => value.replace(/\Rp\s?|(\.*)/g, '')} />
+          </div>
+          {coasList.length > 0 && (
+            <div className="mb-3">
+              <label className="form-label">Bagan Akun (COA)</label>
+              <Select style={{ width: '100%' }} value={coaId} onChange={setCoaId} placeholder="Pilih Bagan Akun" allowClear>
+                {coasList.map(c => (
+                  <Select.Option key={c.id} value={c.id}>{c.account_code} - {c.account_name}</Select.Option>
+                ))}
+              </Select>
+            </div>
+          )}
+        </Modal>
       </div>
-
-      <Modal
-        title={<span className="fw-bold" style={{fontSize: '18px'}}>{isEditMode ? "Ubah Data Akun" : "Tambah Akun Baru"}</span>}
-        open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        footer={null}
-        destroyOnClose
-        closeIcon={<div style={{background: '#ea5455', color: '#fff', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}><i className="fas fa-times" style={{fontSize: '12px'}}/></div>}
-      >
-        <div className="row mt-4">
-          <div className="col-lg-6 mb-3">
-            <label className="form-label" style={{fontSize: '13px', color: '#555'}}>Tipe Akun <span className="text-danger">*</span></label>
-            <Select
-              className="w-100"
-              value={accountType}
-              onChange={setAccountType}
-              options={[
-                { value: 'Kas & Bank', label: 'Kas & Bank' },
-                { value: 'Piutang', label: 'Piutang' },
-                { value: 'Persediaan', label: 'Persediaan' },
-                { value: 'Aset Tetap', label: 'Aset Tetap' },
-                { value: 'Kewajiban / Hutang', label: 'Kewajiban / Hutang' },
-                { value: 'Modal', label: 'Modal' },
-                { value: 'Pendapatan', label: 'Pendapatan' },
-                { value: 'Beban / Pengeluaran', label: 'Beban / Pengeluaran' },
-              ]}
-            />
-          </div>
-          <div className="col-lg-6 mb-3">
-            <label className="form-label" style={{fontSize: '13px', color: '#555'}}>Kode Akun / No. Rekening</label>
-            <Input 
-              className="form-control" 
-              value={accountNumber}
-              onChange={(e) => setAccountNumber(e.target.value)}
-              placeholder="Opsional (Misal: 101 atau 0123...)"
-            />
-          </div>
-        </div>
-
-        <div className="row">
-          <div className="col-lg-6 mb-4">
-            <label className="form-label" style={{fontSize: '13px', color: '#555'}}>Nama Akun <span className="text-danger">*</span></label>
-            <Input 
-              className="form-control" 
-              value={accountName}
-              onChange={(e) => setAccountName(e.target.value)}
-              placeholder="Misal: Kas Laci, BCA, OVO"
-            />
-          </div>
-          <div className="col-lg-6 mb-4">
-            <label className="form-label" style={{fontSize: '13px', color: '#555'}}>Saldo (Rp) <span className="text-danger">*</span></label>
-            <InputNumber 
-              className="w-100 form-control" 
-              value={balance}
-              onChange={setBalance}
-              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value.replace(/\$\s?|(,*)/g, '')}
-            />
-          </div>
-        </div>
-
-        <div className="row">
-          <div className="col-lg-12 mb-4">
-            <label className="form-label" style={{fontSize: '13px', color: '#555'}}>Link ke Buku Besar (COA)</label>
-            <Select
-              className="w-100"
-              value={coaId}
-              onChange={setCoaId}
-              allowClear
-              placeholder="Pilih Akun Buku Besar (Opsional tapi disarankan)"
-              options={coasList.map(coa => ({ value: coa.id, label: `${coa.account_code} - ${coa.account_name}` }))}
-            />
-          </div>
-        </div>
-
-        <div className="d-flex justify-content-end gap-2 pt-3 border-top">
-          <button className="btn text-white fw-bold" style={{background: '#0f2650', padding: '8px 24px'}} onClick={() => setIsModalVisible(false)} disabled={submitting}>
-            Batal
-          </button>
-          <button className="btn text-white fw-bold" style={{background: '#ff9f43', padding: '8px 24px'}} onClick={handleSave} disabled={submitting}>
-            {submitting ? "Menyimpan..." : (isEditMode ? "Simpan Perubahan" : "Simpan Akun")}
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 };
