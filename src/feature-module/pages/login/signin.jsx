@@ -1,14 +1,12 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, ShoppingBag, CheckCircle, ArrowRight, Shield, AlertCircle } from "feather-icons-react/build/IconComponents";
 import { all_routes } from "../../../Router/all_routes";
 import { supabase } from "../../../supabaseClient";
-import { AuthContext } from "../../../core/context/AuthContext";
 
 const Signin = () => {
   const route = all_routes;
   const navigate = useNavigate();
-  const { loginDemo } = useContext(AuthContext);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
