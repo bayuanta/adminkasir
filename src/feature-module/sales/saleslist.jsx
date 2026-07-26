@@ -17,6 +17,17 @@ const SalesList = () => {
 
   useEffect(() => {
     fetchTransactions();
+
+    const channel = supabase
+      .channel('saleslist-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+        fetchTransactions();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStore]);
 
