@@ -346,16 +346,14 @@ const Header = () => {
           </li>
           {/* /Select Store */}
 
-          {/* Flag */}
-          <li className="nav-item dropdown has-arrow flag-nav nav-item-box">
+          {/* Flag commented out per user request */}
+          {/* <li className="nav-item dropdown has-arrow flag-nav nav-item-box">
             <Link
               className="nav-link dropdown-toggle"
               data-bs-toggle="dropdown"
               to="#"
               role="button"
             >
-              {/* <i data-feather="globe" /> */}
-              {/* <FeatherIcon icon="globe" /> */}
               <ImageWithBasePath
                 src="assets/img/flags/us.png"
                 alt="img"
@@ -396,7 +394,7 @@ const Header = () => {
                 German
               </Link>
             </div>
-          </li>
+          </li> */}
           {/* /Flag */}
           <li className="nav-item nav-item-box">
             <Link
@@ -409,21 +407,19 @@ const Header = () => {
               <FeatherIcon icon="maximize" />
             </Link>
           </li>
-          <li className="nav-item nav-item-box">
+          {/* Email, Notifications, Settings commented out per user request */}
+          {/* <li className="nav-item nav-item-box">
             <Link to="/email">
-              {/* <i data-feather="mail" /> */}
               <FeatherIcon icon="mail" />
               <span className="badge rounded-pill">1</span>
             </Link>
           </li>
-          {/* Notifications */}
           <li className="nav-item dropdown nav-item-box">
             <Link
               to="#"
               className="dropdown-toggle nav-link"
               data-bs-toggle="dropdown"
             >
-              {/* <i data-feather="bell" /> */}
               <FeatherIcon icon="bell" />
               <span className="badge rounded-pill">2</span>
             </Link>
@@ -577,13 +573,11 @@ const Header = () => {
               </div>
             </div>
           </li>
-          {/* /Notifications */}
           <li className="nav-item nav-item-box">
             <Link to="/general-settings">
-              {/* <i data-feather="settings" /> */}
               <FeatherIcon icon="settings" />
             </Link>
-          </li>
+          </li> */}
           <li className="nav-item dropdown has-arrow main-drop">
             <Link
               to="#"
