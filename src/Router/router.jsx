@@ -57,7 +57,7 @@ const AllRoutes = () => {
     <div>
       <Routes>
         {/* Auth Pages (Public Access: Signin, Register, etc.) */}
-        <Route path={"/"} element={<Authpages />}>
+        <Route element={<Authpages />}>
           {pagesRoute.map((route, id) => (
             <Route path={route.path} element={route.element} key={id} />
           ))}
@@ -70,12 +70,15 @@ const AllRoutes = () => {
               <Route path={route.path} element={route.element} key={id} />
             ))}
           </Route>
-          <Route path={"/"} element={<HeaderLayout />}>
+          <Route element={<HeaderLayout />}>
             {publicRoutes.map((route, id) => (
               <Route path={route.path} element={route.element} key={id} />
             ))}
           </Route>
         </Route>
+
+        {/* Fallback Catch-all Route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
   );
