@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, ShoppingBag, CheckCircle, ArrowRight, ShieldCheck } from "feather-icons-react/build/IconComponents";
+import { Mail, Lock, Eye, EyeOff, ShoppingBag, CheckCircle, ArrowRight, Shield } from "feather-icons-react/build/IconComponents";
 import { all_routes } from "../../../Router/all_routes";
 
 const Signin = () => {
@@ -173,7 +173,7 @@ const Signin = () => {
 
                       <div className="mt-5">
                         <span className="badge bg-success bg-opacity-20 text-success border border-success border-opacity-30 px-3 py-2 rounded-pill mb-3" style={{ fontSize: '0.82rem' }}>
-                          <ShieldCheck size={14} className="me-1" /> Transaksi Aman &amp; Terkendali
+                          <Shield size={14} className="me-1" /> Transaksi Aman &amp; Terkendali
                         </span>
                         <h2 className="fw-bold text-white display-6 mb-3" style={{ fontSize: '2.1rem', lineHeight: '1.25' }}>
                           Kelola Transaksi &amp; Stok Toko Lebih Cepat.
