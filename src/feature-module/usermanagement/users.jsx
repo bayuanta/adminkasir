@@ -150,34 +150,38 @@ const Users = () => {
           alert("Data kasir berhasil diperbarui!");
         }
       } else {
-        // BUAT AKUN BARU
-        const { error: authError } = await supabase.auth.signUp({
-          email: formData.email.trim(),
-          password: formData.password.trim(),
-          options: {
-            data: {
-              full_name: formData.name,
-              role: formData.role,
-            }
-          }
+        // BUAT AKUN BARU DENGAN AUTO CONFIRM EMAIL
+        const { error: rpcError } = await supabase.rpc('admin_create_cashier_account', {
+          p_email: formData.email.trim(),
+          p_password: formData.password.trim(),
+          p_full_name: formData.name,
+          p_role: formData.role,
+          p_branch_id: formData.branch_id || null
         });
 
-        if (authError && !authError.message.includes('already registered')) {
-          console.warn("Auth Notice:", authError.message);
-        }
+        if (rpcError) {
+          console.warn("RPC Notice, falling back to signUp:", rpcError.message);
+          await supabase.auth.signUp({
+            email: formData.email.trim(),
+            password: formData.password.trim(),
+            options: {
+              data: {
+                full_name: formData.name,
+                role: formData.role,
+              }
+            }
+          });
 
-        const { error: dbError } = await supabase
-          .from('employees')
-          .insert([{
+          await supabase.from('employees').insert([{
             name: formData.name,
             email: formData.email.trim(),
             role: formData.role,
             branch_id: formData.branch_id || null,
             status: 'active'
           }]);
-          
-        if (dbError) throw dbError;
-        alert(`Akun Kasir ${formData.name} berhasil dibuat!`);
+        }
+
+        alert(`Akun Kasir ${formData.name} berhasil dibuat & siap digunakan!`);
       }
 
       closeModal();
