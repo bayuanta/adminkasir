@@ -116,6 +116,7 @@ const ExpensesList = () => {
 
     setSubmitting(true);
     const payload = {
+      category: expenseCategory,
       expense_category: expenseCategory,
       expense_date: expenseDate.toISOString(),
       amount: amount,
@@ -123,7 +124,8 @@ const ExpensesList = () => {
       expense_for: expenseFor,
       description: description,
       branch_id: selectedStore || null,
-      account_id: accountId
+      account_id: accountId,
+      source: 'web_admin'
     };
 
     try {
