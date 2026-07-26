@@ -33,12 +33,20 @@ const TransactionHistory = () => {
         .select(`
           id,
           total_amount,
+          subtotal_amount,
+          discount_amount,
           payment_method,
           cashier_name,
+          customer_name,
           created_at,
           branch_id,
           branches (name, type),
-          accounts (account_name)
+          transaction_items (
+            quantity,
+            price_at_time,
+            subtotal,
+            products (name)
+          )
         `)
         .gte('created_at', startDateIso)
         .lte('created_at', endDateIso)
@@ -59,6 +67,13 @@ const TransactionHistory = () => {
           trx.formattedDate = d.toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' });
           trx.formattedTime = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
           trx.displayId = trx.id.slice(0,8).toUpperCase(); // Short ID
+
+          const itemNames = (trx.transaction_items || []).map(i => {
+            const pName = i.products?.name || 'Produk';
+            return `${pName} (x${i.quantity || 1})`;
+          }).join(', ');
+          trx.itemsSummary = itemNames || 'Penjualan Kasir POS';
+
           return trx;
         });
         setTransactions(processed);

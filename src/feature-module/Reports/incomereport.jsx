@@ -1,360 +1,178 @@
-import React, { useState } from "react";
-import { Filter, Sliders } from "react-feather";
+import React, { useState, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
-import ImageWithBasePath from "../../core/img/imagewithbasebath";
-import Select from "react-select";
-import { CreditCard, User, Zap, Calendar } from "react-feather";
-import DateRangePicker from "react-bootstrap-daterangepicker";
-import Breadcrumbs from "../../core/breadcrumbs";
+import { RotateCcw, DollarSign, TrendingUp, TrendingDown } from "feather-icons-react/build/IconComponents";
+import { supabase } from "../../supabaseClient";
+import { StoreContext } from "../../core/context/StoreContext";
 
 const IncomeReport = () => {
-  const [isFilterVisible, setIsFilterVisible] = useState(false);
-  const toggleFilterVisibility = () => {
-    setIsFilterVisible((prevVisibility) => !prevVisibility);
+  const { selectedStore } = useContext(StoreContext);
+  const [loading, setLoading] = useState(true);
+  const [financeData, setFinanceData] = useState({
+    totalIncome: 0,
+    cashIncome: 0,
+    qrisIncome: 0,
+    totalExpenses: 0,
+    netProfit: 0,
+    trxCount: 0,
+    expenseCount: 0
+  });
+
+  useEffect(() => {
+    fetchIncomeData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStore]);
+
+  const fetchIncomeData = async () => {
+    try {
+      setLoading(true);
+
+      let trxQuery = supabase.from('transactions').select('total_amount, payment_method, branch_id');
+      let expQuery = supabase.from('expenses').select('amount, branch_id');
+
+      if (selectedStore) {
+        trxQuery = trxQuery.eq('branch_id', selectedStore);
+        expQuery = expQuery.eq('branch_id', selectedStore);
+      }
+
+      const { data: trxs, error: trxErr } = await trxQuery;
+      const { data: exps, error: expErr } = await expQuery;
+
+      if (trxErr) console.error("Trx fetch error:", trxErr);
+      if (expErr) console.error("Exp fetch error:", expErr);
+
+      let incomeSum = 0;
+      let cashSum = 0;
+      let qrisSum = 0;
+      (trxs || []).forEach(t => {
+        const amt = t.total_amount || 0;
+        incomeSum += amt;
+        if (t.payment_method === 'cash') cashSum += amt;
+        else qrisSum += amt;
+      });
+
+      let expSum = 0;
+      (exps || []).forEach(e => {
+        expSum += (e.amount || 0);
+      });
+
+      setFinanceData({
+        totalIncome: incomeSum,
+        cashIncome: cashSum,
+        qrisIncome: qrisSum,
+        totalExpenses: expSum,
+        netProfit: incomeSum - expSum,
+        trxCount: (trxs || []).length,
+        expenseCount: (exps || []).length
+      });
+    } catch (err) {
+      console.error("Unexpected error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const options = [
-    { value: "sortByDate", label: "Sort by Date" },
-    { value: "140923", label: "14 09 23" },
-    { value: "110923", label: "11 09 23" },
-  ];
-
-  const optionsCategory = [
-    { value: "Printing", label: "Printing" },
-    { value: "Travel", label: "Travel" },
-  ];
-
-  const optionsCreatedBy = [
-    { value: "Susan Lopez", label: "Susan Lopez" },
-    { value: "Russell Belle", label: "Russell Belle" },
-  ];
-
-  const optionsPaymentMethod = [
-    { value: "Paypal", label: "Paypal" },
-    { value: "Stripe", label: "Stripe" },
-  ];
-
-  const initialSettings = {
-    endDate: new Date("2020-08-11T12:30:00.000Z"),
-    ranges: {
-      "Last 30 Days": [
-        new Date("2020-07-12T04:57:17.076Z"),
-        new Date("2020-08-10T04:57:17.076Z"),
-      ],
-      "Last 7 Days": [
-        new Date("2020-08-04T04:57:17.076Z"),
-        new Date("2020-08-10T04:57:17.076Z"),
-      ],
-      "Last Month": [
-        new Date("2020-06-30T18:30:00.000Z"),
-        new Date("2020-07-31T18:29:59.999Z"),
-      ],
-      "This Month": [
-        new Date("2020-07-31T18:30:00.000Z"),
-        new Date("2020-08-31T18:29:59.999Z"),
-      ],
-      Today: [
-        new Date("2020-08-10T04:57:17.076Z"),
-        new Date("2020-08-10T04:57:17.076Z"),
-      ],
-      Yesterday: [
-        new Date("2020-08-09T04:57:17.076Z"),
-        new Date("2020-08-09T04:57:17.076Z"),
-      ],
-    },
-    startDate: new Date("2020-08-04T04:57:17.076Z"), // Set "Last 7 Days" as default
-    timePicker: false,
-  };
   return (
     <div className="page-wrapper">
       <div className="content">
-        <Breadcrumbs
-          maintitle="Income Report"
-          subtitle="Manage Your Income Report"
-        />
-        {/* /product list */}
-        <div className="card table-list-card">
-          <div className="card-body">
-            <div className="table-top">
-              <div className="search-set">
-                <div className="search-input">
-                  <input
-                    type="text"
-                    placeholder="Search"
-                    className="form-control form-control-sm formsearch"
-                  />
-                  <Link to className="btn btn-searchset">
-                    <i data-feather="search" className="feather-search" />
-                  </Link>
-                </div>
-              </div>
-              <div className="search-path">
-                <Link
-                  className={`btn btn-filter ${
-                    isFilterVisible ? "setclose" : ""
-                  }`}
-                  id="filter_search"
-                >
-                  <Filter
-                    className="filter-icon"
-                    onClick={toggleFilterVisibility}
-                  />
-                  <span onClick={toggleFilterVisibility}>
-                    <ImageWithBasePath
-                      src="assets/img/icons/closes.svg"
-                      alt="img"
-                    />
-                  </span>
-                </Link>
-              </div>
-              <div className="form-sort stylewidth">
-                <Sliders className="info-img" />
-
-                <Select
-                  className="select "
-                  options={options}
-                  placeholder="Sort by Date"
-                />
-              </div>
-            </div>
-            {/* /Filter */}
-            <div
-              className={`card${isFilterVisible ? " visible" : ""}`}
-              id="filter_inputs"
-              style={{ display: isFilterVisible ? "block" : "none" }}
-            >
-              <div className="card-body pb-0">
-                <div className="row">
-                  <div className="col-lg-2 col-sm-6 col-12">
-                    <div className="input-blocks">
-                      <Zap className="info-img" />
-                      <Select
-                        className="select"
-                        options={optionsCategory}
-                        placeholder="Choose Category"
-                      />
-                    </div>
-                  </div>
-                  <div className="col-lg-2 col-sm-6 col-12">
-                    <div className="input-blocks">
-                      <User className="info-img" />
-                      <Select
-                        className="select"
-                        options={optionsCreatedBy}
-                        placeholder="Created by"
-                      />
-                    </div>
-                  </div>
-                  <div className="col-lg-2 col-sm-6 col-12">
-                    <div className="input-blocks">
-                      <CreditCard className="info-img" />
-                      <Select
-                        className="select"
-                        options={optionsPaymentMethod}
-                        placeholder="Payment Method"
-                      />
-                    </div>
-                  </div>
-                  <div className="col-lg-2 col-sm-6 col-12">
-                    <div className="input-blocks">
-                      <div className="position-relative daterange-wraper">
-                        <Calendar className="feather-14 info-img" />
-
-                        <DateRangePicker initialSettings={initialSettings}>
-                          <input
-                            className="form-control col-4 input-range"
-                            type="text"
-                            style={{ border: "none" }}
-                          />
-                        </DateRangePicker>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-lg-4 col-sm-6 col-12 ms-auto">
-                    <div className="input-blocks">
-                      <Link className="btn btn-filters ms-auto">
-                        {" "}
-                        <i
-                          data-feather="search"
-                          className="feather-search"
-                        />{" "}
-                        Search{" "}
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* /Filter */}
-            <div className="table-responsive">
-              <table className="table  datanew">
-                <thead>
-                  <tr>
-                    <th className="no-sort">
-                      <label className="checkboxs">
-                        <input type="checkbox" id="select-all" />
-                        <span className="checkmarks" />
-                      </label>
-                    </th>
-                    <th>Date</th>
-                    <th>Income Category</th>
-                    <th>User</th>
-                    <th>Payment Method</th>
-                    <th>Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>
-                      <label className="checkboxs">
-                        <input type="checkbox" />
-                        <span className="checkmarks" />
-                      </label>
-                    </td>
-                    <td>01 Jan 2024</td>
-                    <td>Printing</td>
-                    <td className="userimgname">
-                      <Link to="#" className="product-img">
-                        <ImageWithBasePath
-                          src="assets/img/users/user-01.jpg"
-                          alt="product"
-                        />
-                      </Link>
-                      <Link to="#">Mitchum Daniel</Link>
-                    </td>
-                    <td className="payment-info">
-                      <Link to="#">
-                        {" "}
-                        <ImageWithBasePath
-                          src="assets/img/icons/pay.svg"
-                          alt="Pay"
-                        />{" "}
-                      </Link>
-                    </td>
-                    <td>$21,144</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <label className="checkboxs">
-                        <input type="checkbox" />
-                        <span className="checkmarks" />
-                      </label>
-                    </td>
-                    <td>14 Jan 2024</td>
-                    <td>Utilities</td>
-                    <td className="userimgname">
-                      <Link to="#" className="product-img">
-                        <ImageWithBasePath
-                          src="assets/img/users/user-02.jpg"
-                          alt="product"
-                        />
-                      </Link>
-                      <Link to="#">Susan Lopez</Link>
-                    </td>
-                    <td className="payment-info">
-                      <Link to="#">
-                        {" "}
-                        <ImageWithBasePath
-                          src="assets/img/icons/stripe.svg"
-                          alt="Pay"
-                        />{" "}
-                      </Link>
-                    </td>
-                    <td>$17,477</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <label className="checkboxs">
-                        <input type="checkbox" />
-                        <span className="checkmarks" />
-                      </label>
-                    </td>
-                    <td>25 Jan 2024</td>
-                    <td>Travel</td>
-                    <td className="userimgname">
-                      <Link to="#" className="product-img">
-                        <ImageWithBasePath
-                          src="assets/img/users/user-03.jpg"
-                          alt="product"
-                        />
-                      </Link>
-                      <Link to="#">Robert Grossman</Link>
-                    </td>
-                    <td className="payment-info">
-                      <Link to="#">
-                        {" "}
-                        <ImageWithBasePath
-                          src="assets/img/icons/razorpay.svg"
-                          alt="Pay"
-                        />{" "}
-                      </Link>
-                    </td>
-                    <td>$22,744</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <label className="checkboxs">
-                        <input type="checkbox" />
-                        <span className="checkmarks" />
-                      </label>
-                    </td>
-                    <td>01 May 2024</td>
-                    <td>Purchase</td>
-                    <td className="userimgname">
-                      <Link to="#" className="product-img">
-                        <ImageWithBasePath
-                          src="assets/img/users/user-04.jpg"
-                          alt="product"
-                        />
-                      </Link>
-                      <Link to="#">Russell Belle</Link>
-                    </td>
-                    <td className="payment-info">
-                      <Link to="#">
-                        {" "}
-                        <ImageWithBasePath
-                          src="assets/img/icons/stripe.svg"
-                          alt="Pay"
-                        />{" "}
-                      </Link>
-                    </td>
-                    <td>$20,474</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <label className="checkboxs">
-                        <input type="checkbox" />
-                        <span className="checkmarks" />
-                      </label>
-                    </td>
-                    <td>14 Oct 2024</td>
-                    <td>Printing</td>
-                    <td className="userimgname">
-                      <Link to="#" className="product-img">
-                        <ImageWithBasePath
-                          src="assets/img/users/user-05.jpg"
-                          alt="product"
-                        />
-                      </Link>
-                      <Link to="#">Edward K. Muniz</Link>
-                    </td>
-                    <td className="payment-info">
-                      <Link to="#">
-                        {" "}
-                        <ImageWithBasePath
-                          src="assets/img/icons/pay.svg"
-                          alt="Pay"
-                        />{" "}
-                      </Link>
-                    </td>
-                    <td>$14,174</td>
-                  </tr>
-                </tbody>
-              </table>
+        <div className="page-header">
+          <div className="add-item d-flex">
+            <div className="page-title">
+              <h4>Laporan Pendapatan & Laba Rugi Bersih</h4>
+              <h6>Ringkasan keuangan real-time dari seluruh transaksi dan pengeluaran</h6>
             </div>
           </div>
+          <ul className="table-top-head">
+            <li>
+              <Link to="#" onClick={(e) => { e.preventDefault(); fetchIncomeData(); }} title="Refresh Data">
+                <RotateCcw />
+              </Link>
+            </li>
+          </ul>
         </div>
-        {/* /product list */}
+
+        {loading ? (
+          <div className="text-center p-5">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <h6 className="mt-3">Kalkulasi data laporan keuangan...</h6>
+          </div>
+        ) : (
+          <div className="row">
+            {/* Laba Rugi Bersih */}
+            <div className="col-md-12 mb-4">
+              <div className={`card ${financeData.netProfit >= 0 ? 'bg-success' : 'bg-danger'} text-white shadow border-0`}>
+                <div className="card-body p-4 d-flex justify-content-between align-items-center">
+                  <div>
+                    <h5 className="text-white-50 mb-1">TOTAL LABA / RUGI BERSIH (NET PROFIT)</h5>
+                    <h1 className="text-white fw-bold mb-0">
+                      Rp {financeData.netProfit.toLocaleString('id-ID')}
+                    </h1>
+                    <small className="text-white-50">
+                      (Total Pendapatan Penjualan: Rp {financeData.totalIncome.toLocaleString('id-ID')} - Total Pengeluaran: Rp {financeData.totalExpenses.toLocaleString('id-ID')})
+                    </small>
+                  </div>
+                  <div className="p-3 bg-white bg-opacity-25 rounded-circle">
+                    {financeData.netProfit >= 0 ? <TrendingUp size={48} /> : <TrendingDown size={48} />}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Total Pendapatan */}
+            <div className="col-md-6 mb-4">
+              <div className="card border-0 shadow-sm">
+                <div className="card-body">
+                  <div className="d-flex align-items-center mb-3">
+                    <div className="p-3 bg-light-success text-success rounded-circle me-3">
+                      <DollarSign size={24} />
+                    </div>
+                    <div>
+                      <h6 className="text-muted mb-0">Total Pendapatan Kotor</h6>
+                      <h4 className="fw-bold text-success mb-0">Rp {financeData.totalIncome.toLocaleString('id-ID')}</h4>
+                    </div>
+                  </div>
+                  <hr />
+                  <div className="d-flex justify-content-between text-muted fs-13">
+                    <span>Kasir Tunai (Cash):</span>
+                    <span className="fw-bold text-dark">Rp {financeData.cashIncome.toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="d-flex justify-content-between text-muted fs-13 mt-2">
+                    <span>Non-Tunai (QRIS):</span>
+                    <span className="fw-bold text-dark">Rp {financeData.qrisIncome.toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="d-flex justify-content-between text-muted fs-13 mt-2">
+                    <span>Total Transaksi POS:</span>
+                    <span className="fw-bold text-dark">{financeData.trxCount} Transaksi</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Total Pengeluaran */}
+            <div className="col-md-6 mb-4">
+              <div className="card border-0 shadow-sm">
+                <div className="card-body">
+                  <div className="d-flex align-items-center mb-3">
+                    <div className="p-3 bg-light-danger text-danger rounded-circle me-3">
+                      <DollarSign size={24} />
+                    </div>
+                    <div>
+                      <h6 className="text-muted mb-0">Total Pengeluaran Operasional</h6>
+                      <h4 className="fw-bold text-danger mb-0">Rp {financeData.totalExpenses.toLocaleString('id-ID')}</h4>
+                    </div>
+                  </div>
+                  <hr />
+                  <div className="d-flex justify-content-between text-muted fs-13">
+                    <span>Jumlah Catatan Biaya:</span>
+                    <span className="fw-bold text-dark">{financeData.expenseCount} Item Biaya</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

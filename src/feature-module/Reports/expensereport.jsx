@@ -1,297 +1,158 @@
-import React, { useState } from "react";
-import { Filter, Sliders } from "react-feather";
+import React, { useState, useEffect, useContext } from "react";
 import { Link } from "react-router-dom";
-import ImageWithBasePath from "../../core/img/imagewithbasebath";
-import Select from "react-select";
-import { User, Zap } from "react-feather";
-import { Calendar } from "react-feather";
-import DateRangePicker from "react-bootstrap-daterangepicker";
-import Breadcrumbs from "../../core/breadcrumbs";
+import { RotateCcw, DollarSign } from "feather-icons-react/build/IconComponents";
+import Table from "../../core/pagination/datatable";
+import { supabase } from "../../supabaseClient";
+import { StoreContext } from "../../core/context/StoreContext";
 
 const ExpenseReport = () => {
-  const [isFilterVisible, setIsFilterVisible] = useState(false);
-  const toggleFilterVisibility = () => {
-    setIsFilterVisible((prevVisibility) => !prevVisibility);
+  const { selectedStore } = useContext(StoreContext);
+  const [expenses, setExpenses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [totalExpenseAmount, setTotalExpenseAmount] = useState(0);
+
+  useEffect(() => {
+    fetchExpenses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStore]);
+
+  const fetchExpenses = async () => {
+    try {
+      setLoading(true);
+      let query = supabase
+        .from('expenses')
+        .select(`
+          id,
+          category,
+          description,
+          amount,
+          created_at,
+          branch_id,
+          branches (name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (selectedStore) {
+        query = query.eq('branch_id', selectedStore);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching expenses:", error);
+      } else {
+        let total = 0;
+        const processed = (data || []).map((exp) => {
+          const d = new Date(exp.created_at);
+          exp.formattedDate = d.toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' });
+          exp.formattedTime = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+          total += (exp.amount || 0);
+          return exp;
+        });
+
+        setExpenses(processed);
+        setTotalExpenseAmount(total);
+      }
+    } catch (error) {
+      console.error("Unexpected error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const options = [
-    { value: "sortByDate", label: "Sort by Date" },
-    { value: "140923", label: "14 09 23" },
-    { value: "110923", label: "11 09 23" },
-  ];
-
-  const optionsCategory = [{ value: "Computers", label: "Computers" }];
-
-  const optionsCreatedBy = [
-    { value: "Complete", label: "Complete" },
-    { value: "Inprogress", label: "Inprogress" },
-  ];
-
-  const initialSettings = {
-    endDate: new Date("2020-08-11T12:30:00.000Z"),
-    ranges: {
-      "Last 30 Days": [
-        new Date("2020-07-12T04:57:17.076Z"),
-        new Date("2020-08-10T04:57:17.076Z"),
-      ],
-      "Last 7 Days": [
-        new Date("2020-08-04T04:57:17.076Z"),
-        new Date("2020-08-10T04:57:17.076Z"),
-      ],
-      "Last Month": [
-        new Date("2020-06-30T18:30:00.000Z"),
-        new Date("2020-07-31T18:29:59.999Z"),
-      ],
-      "This Month": [
-        new Date("2020-07-31T18:30:00.000Z"),
-        new Date("2020-08-31T18:29:59.999Z"),
-      ],
-      Today: [
-        new Date("2020-08-10T04:57:17.076Z"),
-        new Date("2020-08-10T04:57:17.076Z"),
-      ],
-      Yesterday: [
-        new Date("2020-08-09T04:57:17.076Z"),
-        new Date("2020-08-09T04:57:17.076Z"),
-      ],
+  const columns = [
+    {
+      title: "Kategori Pengeluaran",
+      dataIndex: "category",
+      render: (text) => <span className="badge bg-light text-danger border">{text || 'Operasional'}</span>,
+      sorter: (a, b) => (a.category || "").localeCompare(b.category || ""),
     },
-    startDate: new Date("2020-08-04T04:57:17.076Z"), // Set "Last 7 Days" as default
-    timePicker: false,
-  };
+    {
+      title: "Keterangan / Deskripsi",
+      dataIndex: "description",
+      render: (text) => text || '-',
+    },
+    {
+      title: "Loket / Cabang",
+      dataIndex: "branches",
+      render: (text, record) => record.branches?.name || 'Semua Cabang / Pusat',
+    },
+    {
+      title: "Tanggal & Waktu",
+      dataIndex: "formattedDate",
+      render: (text, record) => (
+        <div>
+          <div>{record.formattedDate}</div>
+          <small className="text-muted">{record.formattedTime}</small>
+        </div>
+      ),
+    },
+    {
+      title: "Jumlah Pengeluaran",
+      dataIndex: "amount",
+      render: (text) => (
+        <span className="fw-bold text-danger">
+          Rp {(text || 0).toLocaleString('id-ID')}
+        </span>
+      ),
+      sorter: (a, b) => (a.amount || 0) - (b.amount || 0),
+    },
+  ];
+
   return (
     <div className="page-wrapper">
       <div className="content">
-        <Breadcrumbs
-          maintitle="Expenses Report"
-          subtitle="Manage Your Expenses Report"
-        />
-        {/* /product list */}
-        <div className="card table-list-card">
-          <div className="card-body">
-            <div className="table-top">
-              <div className="search-set">
-                <div className="search-input">
-                  <input
-                    type="text"
-                    placeholder="Search"
-                    className="form-control form-control-sm formsearch"
-                  />
-                  <Link to className="btn btn-searchset">
-                    <i data-feather="search" className="feather-search" />
-                  </Link>
+        <div className="page-header">
+          <div className="add-item d-flex">
+            <div className="page-title">
+              <h4>Laporan Pengeluaran Operasional</h4>
+              <h6>Kelola dan audit riwayat pengeluaran kasir & operasional unit</h6>
+            </div>
+          </div>
+          <ul className="table-top-head">
+            <li>
+              <Link to="#" onClick={(e) => { e.preventDefault(); fetchExpenses(); }} title="Refresh Data">
+                <RotateCcw />
+              </Link>
+            </li>
+          </ul>
+        </div>
+
+        {/* Summary Banner */}
+        <div className="row mb-4">
+          <div className="col-md-6">
+            <div className="card bg-danger text-white shadow-sm border-0">
+              <div className="card-body d-flex align-items-center">
+                <div className="me-3 p-3 bg-white bg-opacity-25 rounded-circle">
+                  <DollarSign size={28} />
+                </div>
+                <div>
+                  <h6 className="text-white-50 mb-1">Total Biaya Pengeluaran</h6>
+                  <h3 className="text-white fw-bold mb-0">Rp {totalExpenseAmount.toLocaleString('id-ID')}</h3>
                 </div>
               </div>
-              <div className="search-path">
-                <Link
-                  className={`btn btn-filter ${
-                    isFilterVisible ? "setclose" : ""
-                  }`}
-                  id="filter_search"
-                >
-                  <Filter
-                    className="filter-icon"
-                    onClick={toggleFilterVisibility}
-                  />
-                  <span onClick={toggleFilterVisibility}>
-                    <ImageWithBasePath
-                      src="assets/img/icons/closes.svg"
-                      alt="img"
-                    />
-                  </span>
-                </Link>
-              </div>
-              <div className="form-sort stylewidth">
-                <Sliders className="info-img" />
-
-                <Select
-                  className="select "
-                  options={options}
-                  placeholder="Sort by Date"
-                />
-              </div>
-            </div>
-            {/* /Filter */}
-            <div
-              className={`card${isFilterVisible ? " visible" : ""}`}
-              id="filter_inputs"
-              style={{ display: isFilterVisible ? "block" : "none" }}
-            >
-              <div className="card-body pb-0">
-                <div className="row">
-                  <div className="col-lg-3 col-sm-6 col-12">
-                    <div className="input-blocks">
-                      <Zap className="info-img" />
-                      <Select
-                        className="select"
-                        options={optionsCategory}
-                        placeholder="Choose Category"
-                      />
-                    </div>
-                  </div>
-                  <div className="col-lg-3 col-sm-6 col-12">
-                    <div className="input-blocks">
-                      <User className="info-img" />
-                      <Select
-                        className="select"
-                        options={optionsCreatedBy}
-                        placeholder="Created by"
-                      />
-                    </div>
-                  </div>
-                  <div className="col-lg-3 col-sm-6 col-12">
-                    <div className="input-blocks">
-                      <div className="position-relative daterange-wraper">
-                        <Calendar className="feather-14 info-img" />
-
-                        <DateRangePicker initialSettings={initialSettings}>
-                          <input
-                            className="form-control col-4 input-range"
-                            type="text"
-                            style={{ border: "none" }}
-                          />
-                        </DateRangePicker>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="col-lg-3 col-sm-6 col-12 ms-auto">
-                    <div className="input-blocks">
-                      <Link className="btn btn-filters ms-auto">
-                        {" "}
-                        <i
-                          data-feather="search"
-                          className="feather-search"
-                        />{" "}
-                        Search{" "}
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* /Filter */}
-            <div className="table-responsive">
-              <table className="table datanew">
-                <thead>
-                  <tr>
-                    <th className="no-sort">
-                      <label className="checkboxs">
-                        <input type="checkbox" id="select-all" />
-                        <span className="checkmarks" />
-                      </label>
-                    </th>
-                    <th>Date</th>
-                    <th>Expense Category</th>
-                    <th>User</th>
-                    <th>Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="Expense-list">
-                  <tr>
-                    <td>
-                      <label className="checkboxs">
-                        <input type="checkbox" />
-                        <span className="checkmarks" />
-                      </label>
-                    </td>
-                    <td>01 Jan 2024</td>
-                    <td>Printing</td>
-                    <td className="userimgname">
-                      <Link to="#" className="product-img">
-                        <ImageWithBasePath
-                          src="assets/img/users/user-01.jpg"
-                          alt="product"
-                        />
-                      </Link>
-                      <Link to="#">Mitchum Daniel</Link>
-                    </td>
-                    <td>$14,174</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <label className="checkboxs">
-                        <input type="checkbox" />
-                        <span className="checkmarks" />
-                      </label>
-                    </td>
-                    <td>14 Jan 2024</td>
-                    <td>Utilities</td>
-                    <td className="userimgname">
-                      <Link to="#" className="product-img">
-                        <ImageWithBasePath
-                          src="assets/img/users/user-02.jpg"
-                          alt="product"
-                        />
-                      </Link>
-                      <Link to="#">Susan Lopez</Link>
-                    </td>
-                    <td>$19,474</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <label className="checkboxs">
-                        <input type="checkbox" />
-                        <span className="checkmarks" />
-                      </label>
-                    </td>
-                    <td>25 Jan 2024</td>
-                    <td>Travel</td>
-                    <td className="userimgname">
-                      <Link to="#" className="product-img">
-                        <ImageWithBasePath
-                          src="assets/img/users/user-03.jpg"
-                          alt="product"
-                        />
-                      </Link>
-                      <Link to="#">Robert Grossman</Link>
-                    </td>
-                    <td>$20,744</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <label className="checkboxs">
-                        <input type="checkbox" />
-                        <span className="checkmarks" />
-                      </label>
-                    </td>
-                    <td>01 May 2024</td>
-                    <td>Purchase</td>
-                    <td className="userimgname">
-                      <Link to="#" className="product-img">
-                        <ImageWithBasePath
-                          src="assets/img/users/user-04.jpg"
-                          alt="product"
-                        />
-                      </Link>
-                      <Link to="#">Russell Belle</Link>
-                    </td>
-                    <td>$25,474</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <label className="checkboxs">
-                        <input type="checkbox" />
-                        <span className="checkmarks" />
-                      </label>
-                    </td>
-                    <td>14 Oct 2024</td>
-                    <td>Printing</td>
-                    <td className="userimgname">
-                      <Link to="#" className="product-img">
-                        <ImageWithBasePath
-                          src="assets/img/users/user-05.jpg"
-                          alt="product"
-                        />
-                      </Link>
-                      <Link to="#">Edward K. Muniz</Link>
-                    </td>
-                    <td>$12,436</td>
-                  </tr>
-                </tbody>
-              </table>
             </div>
           </div>
         </div>
-        {/* /product list */}
+
+        {/* Table Section */}
+        <div className="card table-list-card">
+          <div className="card-body">
+            <div className="table-responsive">
+              {loading ? (
+                <div className="text-center p-5">
+                  <div className="spinner-border text-danger" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                  </div>
+                  <h6 className="mt-3">Mengambil data pengeluaran...</h6>
+                </div>
+              ) : (
+                <Table columns={columns} dataSource={expenses} />
+              )}
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );

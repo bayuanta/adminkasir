@@ -32,12 +32,19 @@ const SalesList = () => {
         .select(`
           id,
           total_amount,
+          subtotal_amount,
+          discount_amount,
           payment_method,
           cashier_name,
+          customer_name,
           created_at,
           branch_id,
           branches (name, type),
-          accounts (account_name)
+          transaction_items (
+            quantity,
+            price_at_time,
+            products (name)
+          )
         `)
         .gte('created_at', startDateIso)
         .lte('created_at', endDateIso)
@@ -69,6 +76,14 @@ const SalesList = () => {
           
           // Format e.g., "10:35:47"
           trx.timeString = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+          // Summary items
+          const itemNames = (trx.transaction_items || []).map(i => {
+            const pName = i.products?.name || 'Produk';
+            return `${pName} (x${i.quantity || 1})`;
+          }).join(', ');
+          trx.itemsSummary = itemNames || 'Penjualan Kasir POS';
+
           return trx;
         });
         
@@ -136,10 +151,10 @@ const SalesList = () => {
                       <th className="border-0 text-muted" style={{fontWeight: 600, fontSize: '12px', padding: '15px 10px', width: '60px'}}></th>
                       <th className="border-0 text-muted" style={{fontWeight: 600, fontSize: '12px', padding: '15px 10px', textTransform: 'uppercase', letterSpacing: '0.5px'}}>JAM</th>
                       <th className="border-0 text-muted" style={{fontWeight: 600, fontSize: '12px', padding: '15px 10px', textTransform: 'uppercase', letterSpacing: '0.5px'}}>NOMOR</th>
-                      <th className="border-0 text-muted" style={{fontWeight: 600, fontSize: '12px', padding: '15px 10px', textTransform: 'uppercase', letterSpacing: '0.5px'}}>AKUN TUJUAN</th>
+                      <th className="border-0 text-muted" style={{fontWeight: 600, fontSize: '12px', padding: '15px 10px', textTransform: 'uppercase', letterSpacing: '0.5px'}}>LOKET / CABANG</th>
                       <th className="border-0 text-muted" style={{fontWeight: 600, fontSize: '12px', padding: '15px 10px', textTransform: 'uppercase', letterSpacing: '0.5px'}}>PELANGGAN</th>
-                      <th className="border-0 text-muted" style={{fontWeight: 600, fontSize: '12px', padding: '15px 10px', textTransform: 'uppercase', letterSpacing: '0.5px'}}>MEJA</th>
-                      <th className="border-0 text-muted" style={{fontWeight: 600, fontSize: '12px', padding: '15px 10px', textTransform: 'uppercase', letterSpacing: '0.5px'}}>ITEM</th>
+                      <th className="border-0 text-muted" style={{fontWeight: 600, fontSize: '12px', padding: '15px 10px', textTransform: 'uppercase', letterSpacing: '0.5px'}}>KASIR</th>
+                      <th className="border-0 text-muted" style={{fontWeight: 600, fontSize: '12px', padding: '15px 10px', textTransform: 'uppercase', letterSpacing: '0.5px'}}>ITEM PRODUK</th>
                       <th className="border-0 text-muted text-end" style={{fontWeight: 600, fontSize: '12px', padding: '15px 10px', textTransform: 'uppercase', letterSpacing: '0.5px'}}>TOTAL</th>
                     </tr>
                   </thead>
@@ -166,13 +181,13 @@ const SalesList = () => {
                             <td className="border-0 text-secondary align-middle" style={{padding: '12px 10px', fontSize: '13px'}}>{trx.formattedId}</td>
                             <td className="border-0 text-secondary align-middle" style={{padding: '12px 10px', fontSize: '13px'}}>
                               <span className="badge bg-light text-primary border px-2 py-1">
-                                {trx.accounts?.account_name || (trx.payment_method === 'cash' ? 'Cash / Tunai' : 'QRIS')}
+                                {trx.branches?.name || 'Pusat'}
                               </span>
                             </td>
-                            <td className="border-0 text-secondary align-middle" style={{padding: '12px 10px', fontSize: '13px'}}>-</td>
-                            <td className="border-0 text-secondary align-middle" style={{padding: '12px 10px', fontSize: '13px'}}>-</td>
+                            <td className="border-0 text-secondary align-middle" style={{padding: '12px 10px', fontSize: '13px'}}>{trx.customer_name || 'Pelanggan Umum'}</td>
+                            <td className="border-0 text-secondary align-middle" style={{padding: '12px 10px', fontSize: '13px'}}>{trx.cashier_name || 'Kasir'}</td>
                             <td className="border-0 text-secondary align-middle" style={{padding: '12px 10px', fontSize: '13px'}}>
-                              <span style={{color: '#777'}}><em>Contoh: Nasi ayam penyet, es teh manis, dll</em></span>
+                              <span className="fw-semibold text-dark">{trx.itemsSummary}</span>
                             </td>
                             <td className="border-0 text-end text-dark align-middle" style={{padding: '12px 10px', fontSize: '13.5px'}}>
                               Rp. {(trx.total_amount || 0).toLocaleString('id-ID')}
