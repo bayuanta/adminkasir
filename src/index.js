@@ -17,6 +17,7 @@ import store from "./core/redux/store.jsx";
 import AllRoutes from "./Router/router.jsx";
 
 import { StoreProvider } from "./core/context/StoreContext.jsx";
+import { AuthProvider } from "./core/context/AuthContext.jsx";
 
 const rootElement = document.getElementById('root');
 
@@ -25,11 +26,13 @@ if (rootElement) {
   root.render(
     <React.StrictMode>
     <Provider store={store} >
-      <StoreProvider>
-        <BrowserRouter basename={base_path}>
-          <AllRoutes />
-        </BrowserRouter>
-      </StoreProvider>
+      <AuthProvider>
+        <StoreProvider>
+          <BrowserRouter basename={base_path}>
+            <AllRoutes />
+          </BrowserRouter>
+        </StoreProvider>
+      </AuthProvider>
     </Provider>
   </React.StrictMode>
   );

@@ -1,7 +1,7 @@
-/* eslint-disable no-unused-vars */
 import React, { useEffect, useState, useContext } from "react";
 import { StoreContext } from "../../core/context/StoreContext";
-import { Link } from "react-router-dom";
+import { AuthContext } from "../../core/context/AuthContext";
+import { Link, useNavigate } from "react-router-dom";
 import FeatherIcon from "feather-icons-react";
 import ImageWithBasePath from "../../core/img/imagewithbasebath";
 import { Search, XCircle } from "react-feather";
@@ -9,9 +9,17 @@ import { all_routes } from "../../Router/all_routes";
 
 const Header = () => {
   const { selectedStore, setSelectedStore, branches, loading } = useContext(StoreContext);
+  const { user, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
   const route = all_routes;
   const [toggle, SetToggle] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const handleLogout = async (e) => {
+    e.preventDefault();
+    await logout();
+    navigate("/signin");
+  };
 
   const isElementVisible = (element) => {
     return element.offsetWidth > 0 || element.offsetHeight > 0;
@@ -593,8 +601,8 @@ const Header = () => {
                   />
                 </span>
                 <span className="user-detail">
-                  <span className="user-name">John Smilga</span>
-                  <span className="user-role">Super Admin</span>
+                  <span className="user-name">{user?.user_metadata?.name || user?.email?.split('@')[0] || "Admin Kasir"}</span>
+                  <span className="user-role">{user?.email || "Kasir Utama"}</span>
                 </span>
               </span>
             </Link>
@@ -609,26 +617,26 @@ const Header = () => {
                     <span className="status online" />
                   </span>
                   <div className="profilesets">
-                    <h6>John Smilga</h6>
-                    <h5>Super Admin</h5>
+                    <h6>{user?.user_metadata?.name || user?.email?.split('@')[0] || "Admin Kasir"}</h6>
+                    <h5>{user?.email || "Kasir Utama"}</h5>
                   </div>
                 </div>
                 <hr className="m-0" />
                 <Link className="dropdown-item" to={route.route}>
-                  <i className="me-2" data-feather="user" /> My Profile
+                  <i className="me-2" data-feather="user" /> Profil Saya
                 </Link>
                 <Link className="dropdown-item" to={route.generalsettings}>
                   <i className="me-2" data-feather="settings" />
-                  Settings
+                  Pengaturan
                 </Link>
                 <hr className="m-0" />
-                <Link className="dropdown-item logout pb-0" to="/signin">
+                <Link className="dropdown-item logout pb-0" to="#" onClick={handleLogout}>
                   <ImageWithBasePath
                     src="assets/img/icons/log-out.svg"
                     alt="img"
                     className="me-2"
                   />
-                  Logout
+                  Keluar / Logout
                 </Link>
               </div>
             </div>
