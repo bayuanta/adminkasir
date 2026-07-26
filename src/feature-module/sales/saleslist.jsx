@@ -24,8 +24,8 @@ const SalesList = () => {
     try {
       setLoading(true);
       
-      const startDateIso = dateRange[0].startOf('day').toISOString();
-      const endDateIso = dateRange[1].endOf('day').toISOString();
+      const startDateIso = dateRange[0].startOf('day').subtract(1, 'day').toISOString();
+      const endDateIso = dateRange[1].endOf('day').add(1, 'day').toISOString();
       
       let query = supabase
         .from('transactions')
