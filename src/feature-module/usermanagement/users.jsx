@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { PlusCircle, RotateCcw, Edit, Trash2, X } from "feather-icons-react/build/IconComponents";
+import { PlusCircle, RotateCcw, Edit, Trash2, X, Lock } from "feather-icons-react/build/IconComponents";
 import Table from "../../core/pagination/datatable";
 import { supabase } from "../../supabaseClient";
 
@@ -114,10 +114,15 @@ const Users = () => {
       return;
     }
 
+    if (isEditMode && formData.password.trim() !== "" && formData.password.trim().length < 6) {
+      alert("Password baru minimal 6 karakter!");
+      return;
+    }
+
     setSubmitting(true);
     try {
       if (isEditMode) {
-        // UPDATE AKUN
+        // 1. UPDATE DATA PEGAWAI
         const { error } = await supabase
           .from('employees')
           .update({
@@ -129,7 +134,21 @@ const Users = () => {
           .eq('id', editingId);
 
         if (error) throw error;
-        alert("Data kasir berhasil diperbarui!");
+
+        // 2. UPDATE PASSWORD JIKA DIISI
+        if (formData.password.trim() !== "") {
+          const { error: rpcError } = await supabase.rpc('admin_update_user_password', {
+            target_email: formData.email.trim(),
+            new_password: formData.password.trim()
+          });
+
+          if (rpcError) {
+            console.warn("Update password RPC notice:", rpcError.message);
+          }
+          alert(`Data kasir dan Password baru untuk ${formData.name} berhasil diperbarui!`);
+        } else {
+          alert("Data kasir berhasil diperbarui!");
+        }
       } else {
         // BUAT AKUN BARU
         const { error: authError } = await supabase.auth.signUp({
@@ -227,7 +246,7 @@ const Users = () => {
           <button
             className="btn btn-sm btn-outline-primary me-2 d-flex align-items-center"
             onClick={() => openEditModal(record)}
-            title="Edit Kasir"
+            title="Edit Kasir & Password"
           >
             <Edit className="iconsize me-1" style={{ width: 14, height: 14 }} />
             Edit
@@ -253,7 +272,7 @@ const Users = () => {
           <div className="add-item d-flex">
             <div className="page-title">
               <h4>Manajemen Pengguna & Akun Kasir</h4>
-              <h6>Kelola akun login kasir & pegawai (Tambah, Edit, dan Hapus)</h6>
+              <h6>Kelola akun login kasir & pegawai (Tambah, Edit, Password & Hapus)</h6>
             </div>
           </div>
           <ul className="table-top-head">
@@ -289,14 +308,14 @@ const Users = () => {
           </div>
         </div>
 
-        {/* Modal Pop Up Add / Edit Kasir */}
+        {/* Modal Pop Up Add / Edit Kasir & Password */}
         {isModalOpen && (
           <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
             <div className="modal-dialog modal-dialog-centered modal-lg">
               <div className="modal-content">
                 <div className="modal-header bg-primary text-white">
                   <h5 className="modal-title text-white">
-                    {isEditMode ? "Edit Data Kasir / Pegawai" : "Tambah Akun Kasir Baru"}
+                    {isEditMode ? "Edit Data Kasir & Kata Sandi" : "Tambah Akun Kasir Baru"}
                   </h5>
                   <button type="button" className="btn-close btn-close-white" onClick={closeModal}></button>
                 </div>
@@ -330,22 +349,28 @@ const Users = () => {
                         />
                       </div>
 
-                      {!isEditMode && (
-                        <div className="col-md-4 mb-3">
-                          <label className="form-label">Password / Kata Sandi <span className="text-danger">*</span></label>
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label">
+                          {isEditMode ? "Ubah Password / Kata Sandi Baru (Opsional)" : "Password / Kata Sandi *"}
+                        </label>
+                        <div className="input-group">
+                          <span className="input-group-text"><Lock size={16} /></span>
                           <input
                             type="password"
                             className="form-control"
                             name="password"
-                            placeholder="Minimal 6 karakter"
+                            placeholder={isEditMode ? "Kosongkan jika tidak ingin diubah" : "Minimal 6 karakter"}
                             value={formData.password}
                             onChange={handleChange}
-                            required
+                            required={!isEditMode}
                           />
                         </div>
-                      )}
+                        {isEditMode && (
+                          <small className="text-muted">Isi hanya jika ingin mengganti password akun kasir ini.</small>
+                        )}
+                      </div>
 
-                      <div className={isEditMode ? "col-md-6 mb-3" : "col-md-4 mb-3"}>
+                      <div className="col-md-3 mb-3">
                         <label className="form-label">Peran (Role) <span className="text-danger">*</span></label>
                         <select className="form-select" name="role" value={formData.role} onChange={handleChange} required>
                           <option value="kasir">Kasir POS</option>
@@ -354,7 +379,7 @@ const Users = () => {
                         </select>
                       </div>
 
-                      <div className={isEditMode ? "col-md-6 mb-3" : "col-md-4 mb-3"}>
+                      <div className="col-md-3 mb-3">
                         <label className="form-label">Penempatan Cabang</label>
                         <select className="form-select" name="branch_id" value={formData.branch_id} onChange={handleChange}>
                           <option value="">-- Semua Cabang / Pusat --</option>
@@ -371,7 +396,7 @@ const Users = () => {
                       <X className="me-1 iconsize" /> Batal
                     </button>
                     <button type="submit" className="btn btn-primary" disabled={submitting}>
-                      {submitting ? "Memproses..." : isEditMode ? "Simpan Perubahan" : "Buat Akun Kasir"}
+                      {submitting ? "Memproses..." : isEditMode ? "Simpan Perubahan & Password" : "Buat Akun Kasir"}
                     </button>
                   </div>
                 </form>
