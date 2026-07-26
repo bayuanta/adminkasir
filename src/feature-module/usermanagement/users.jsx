@@ -80,7 +80,7 @@ const Users = () => {
     setSubmitting(true);
     try {
       // 1. Buat Akun Auth di Supabase
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { error: authError } = await supabase.auth.signUp({
         email: formData.email.trim(),
         password: formData.password.trim(),
         options: {
