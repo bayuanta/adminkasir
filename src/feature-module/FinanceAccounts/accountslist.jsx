@@ -54,7 +54,7 @@ const AccountsList = () => {
   const fetchAccounts = async () => {
     setLoading(true);
     try {
-      let accQuery = supabase.from('accounts').select('*').order('account_type', { ascending: true });
+      let accQuery = supabase.from('accounts').select('*, coa(account_code, account_name, account_type)').order('account_type', { ascending: true });
       let trxQuery = supabase.from('transactions').select('total_amount, payment_method, branch_id');
       let expQuery = supabase.from('expenses').select('amount, branch_id');
 
@@ -205,6 +205,19 @@ const AccountsList = () => {
       dataIndex: 'account_number',
       key: 'account_number',
       render: (text) => text || '-'
+    },
+    {
+      title: 'Bagan Akun (COA)',
+      dataIndex: 'coa',
+      key: 'coa',
+      render: (c, record) => {
+        if (c) return <span className="badge bg-light text-purple border fw-bold">[{c.account_code}] {c.account_name}</span>;
+        const nameLower = (record.account_name || '').toLowerCase();
+        if (nameLower.includes('qris') || nameLower.includes('bank')) {
+          return <span className="badge bg-light text-primary border">[1-1100] Bank BCA / QRIS</span>;
+        }
+        return <span className="badge bg-light text-success border">[1-1000] Kas Utama POS</span>;
+      }
     },
     {
       title: 'Tipe Akun',

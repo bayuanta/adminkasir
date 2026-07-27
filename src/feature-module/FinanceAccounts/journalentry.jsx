@@ -94,13 +94,14 @@ const JournalEntry = () => {
 
   const handleDelete = async (id) => {
     try {
+      await supabase.from('journal_lines').delete().eq('journal_entry_id', id);
       const { error } = await supabase.from('journal_entries').delete().eq('id', id);
       if (error) throw error;
       message.success("Jurnal berhasil dihapus");
       fetchJournals();
     } catch (err) {
       console.error("Error deleting:", err);
-      message.error("Gagal menghapus jurnal");
+      message.error(`Gagal menghapus jurnal: ${err.message || err.details || 'Unknown Error'}`);
     }
   };
 
