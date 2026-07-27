@@ -19,7 +19,6 @@ const GeneralLedger = () => {
   
   // Data
   const [ledgerData, setLedgerData] = useState([]);
-  const [openingBalance, setOpeningBalance] = useState(0);
 
   useEffect(() => {
     fetchCOA();
@@ -158,7 +157,6 @@ const GeneralLedger = () => {
         };
       });
 
-      setOpeningBalance(0);
       setLedgerData(processed);
     } catch (err) {
       console.error("Error building general ledger:", err);

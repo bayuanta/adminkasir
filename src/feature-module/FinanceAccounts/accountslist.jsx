@@ -295,7 +295,7 @@ const AccountsList = () => {
           </div>
           <div className="mb-3">
             <label className="form-label">Saldo Awal (Rp)</label>
-            <InputNumber style={{ width: '100%' }} value={balance} onChange={(v) => setBalance(v || 0)} formatter={value => `Rp ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')} parser={value => value.replace(/\Rp\s?|(\.*)/g, '')} />
+            <InputNumber style={{ width: '100%' }} value={balance} onChange={(v) => setBalance(v || 0)} formatter={value => `Rp ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')} parser={value => value.replace(/Rp\s?|(\.*)/g, '')} />
           </div>
           {coasList.length > 0 && (
             <div className="mb-3">
