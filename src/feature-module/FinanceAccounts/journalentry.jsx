@@ -29,6 +29,16 @@ const JournalEntry = () => {
   useEffect(() => {
     fetchJournals();
     fetchCOA();
+
+    const channel = supabase
+      .channel('journals-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'journal_entries' }, () => fetchJournals())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'journal_lines' }, () => fetchJournals())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStore]);
 
@@ -67,8 +77,8 @@ const JournalEntry = () => {
       const { data, error } = await query;
       if (error) throw error;
 
-      const formattedData = data.map(j => {
-        const totalAmount = j.journal_lines.reduce((sum, line) => sum + (Number(line.debit) || 0), 0);
+      const formattedData = (data || []).map(j => {
+        const totalAmount = (j.journal_lines || []).reduce((sum, line) => sum + (Number(line.debit) || 0), 0);
         return { ...j, totalAmount };
       });
       
@@ -98,6 +108,7 @@ const JournalEntry = () => {
       const { error } = await supabase.from('journal_entries').delete().eq('id', id);
       if (error) throw error;
       message.success("Jurnal berhasil dihapus");
+      setJournals(prev => prev.filter(j => j.id !== id));
       fetchJournals();
     } catch (err) {
       console.error("Error deleting:", err);
