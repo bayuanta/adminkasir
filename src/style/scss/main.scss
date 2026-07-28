@@ -75,4 +75,108 @@
 @import "pages/pos-design";
 @import "pages/call";
 @import "pages/file-manager";
-@import "pages/customisedstyle"
+@import "pages/customisedstyle";
+
+/* ==========================================================
+   PREMIUM HIGH-CONTRAST SIDEBAR & ICON STYLING OVERRIDE
+   ========================================================== */
+
+/* 1. Default Inactive Sidebar Icons & Text */
+.sidebar .sidebar-menu > ul > li > a {
+    color: #374151 !important;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+
+    svg {
+        color: #4B5563 !important;
+        stroke-width: 2px;
+        transition: color 0.2s ease-in-out;
+    }
+}
+
+/* 2. Hover State */
+.sidebar .sidebar-menu > ul > li > a:hover {
+    background: #FFF3E0 !important;
+    color: #EA580C !important;
+    border-radius: 8px;
+
+    svg {
+        color: #EA580C !important;
+    }
+
+    span {
+        color: #EA580C !important;
+    }
+}
+
+/* 3. Active & Subdrop State (Expanded / Selected Menu) */
+.sidebar .sidebar-menu > ul > li.active > a,
+.sidebar .sidebar-menu > ul > li > a.active,
+.sidebar .sidebar-menu > ul > li > a.subdrop {
+    background: #FFF3E0 !important;
+    color: #EA580C !important;
+    border-radius: 8px;
+    border-left: 4px solid #EA580C !important;
+
+    svg {
+        color: #EA580C !important;
+        stroke-width: 2.2px;
+    }
+
+    span {
+        color: #EA580C !important;
+        font-weight: 600 !important;
+    }
+
+    .menu-arrow {
+        background: #FFE0B2 !important;
+        &::before {
+            border-color: #EA580C !important;
+        }
+    }
+}
+
+/* 4. Submenu Item Styling (Children) */
+.sidebar .sidebar-menu ul li ul li a {
+    color: #4B5563 !important;
+    font-weight: 500;
+    font-size: 14px;
+
+    &:hover {
+        color: #EA580C !important;
+        background: transparent !important;
+    }
+
+    &.active {
+        color: #EA580C !important;
+        font-weight: 600 !important;
+        background: rgba(234, 88, 12, 0.1) !important;
+        border-radius: 6px;
+    }
+}
+
+/* 5. Mini Sidebar (Collapsed Mode Fix) */
+body.mini-sidebar .sidebar .sidebar-menu > ul > li > a {
+    justify-content: center;
+    padding: 12px 0 !important;
+
+    svg {
+        color: #4B5563 !important;
+        min-width: 20px;
+        width: 20px;
+        height: 20px;
+    }
+}
+
+body.mini-sidebar .sidebar .sidebar-menu > ul > li.active > a,
+body.mini-sidebar .sidebar .sidebar-menu > ul > li > a.active,
+body.mini-sidebar .sidebar .sidebar-menu > ul > li > a.subdrop {
+    background: #EA580C !important;
+    border-radius: 10px !important;
+    border-left: none !important;
+
+    svg {
+        color: #FFFFFF !important;
+    }
+}
+
