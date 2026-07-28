@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from "react";
-import { Table, DatePicker, Button, Card, Typography, Tag, Row, Col, Statistic, Progress, Space } from 'antd';
+import { Table, DatePicker, Button, Card, Typography, Tag, Row, Col, Space } from 'antd';
+import Chart from "react-apexcharts";
 import { supabase } from "../../supabaseClient";
 import { StoreContext } from "../../core/context/StoreContext";
 import * as Icon from 'react-feather';
@@ -170,6 +171,35 @@ const HourlyReport = () => {
     }
   };
 
+  const apexChartOptions = {
+    chart: { type: 'bar', height: 320, toolbar: { show: false } },
+    plotOptions: { bar: { borderRadius: 4, columnWidth: '55%' } },
+    dataLabels: { enabled: false },
+    stroke: { show: true, width: 2, colors: ['transparent'] },
+    colors: ['#3B82F6', '#10B981'],
+    xaxis: {
+      categories: hourlyData.map(h => `${h.hour.toString().padStart(2, '0')}:00`),
+      labels: { style: { fontSize: '11px', colors: '#6B7280' } }
+    },
+    yaxis: [
+      {
+        title: { text: 'Omset (Rp)', style: { color: '#3B82F6', fontSize: '12px' } },
+        labels: { formatter: (val) => val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val }
+      },
+      {
+        opposite: true,
+        title: { text: 'Trx', style: { color: '#10B981', fontSize: '12px' } },
+        labels: { formatter: (val) => Math.round(val) }
+      }
+    ],
+    tooltip: {
+      y: {
+        formatter: (val, { seriesIndex }) => seriesIndex === 0 ? `Rp ${val.toLocaleString('id-ID')}` : `${val} Transaksi`
+      }
+    },
+    legend: { position: 'top', horizontalAlign: 'right' }
+  };
+
   const columns = [
     {
       title: 'Rentang Jam (WIB)',
@@ -258,7 +288,7 @@ const HourlyReport = () => {
         </div>
 
         {/* Filter Date Bar */}
-        <Card className="mb-4 shadow-sm border-0">
+        <Card className="mb-4 shadow-sm border-0 rounded-3">
           <div className="row align-items-center">
             <div className="col-md-6">
               <label className="form-label fw-bold">Pilih Rentang Tanggal Laporan (Dari - Sampai):</label>
@@ -278,115 +308,156 @@ const HourlyReport = () => {
           </div>
         </Card>
 
-        {/* Summary Statistics Cards */}
+        {/* DreamsPOS Modern Stat Cards (Identical Height & Circular Icon Widgets) */}
         <Row gutter={[16, 16]} className="mb-4">
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="shadow-sm border-0 border-start border-4 border-primary">
-              <Statistic
-                title="Jam Teramai Penjualan (Peak Hour)"
-                value={summary.peakHour}
-                valueStyle={{ fontSize: '16px', fontWeight: 'bold', color: '#1890ff' }}
-                prefix={<Icon.Clock size={18} className="me-2 text-primary" />}
-              />
-              {summary.peakTrxCount > 0 && (
-                <Text type="secondary" className="fs-12">Sub-total: {summary.peakTrxCount} Transaksi</Text>
-              )}
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="shadow-sm border-0 border-start border-4 border-success">
-              <Statistic
-                title="Total Omset Hari Ini"
-                value={summary.totalRevenue}
-                precision={0}
-                prefix="Rp "
-                valueStyle={{ fontSize: '20px', fontWeight: 'bold', color: '#52c41a' }}
-              />
-              <Text type="secondary" className="fs-12">{summary.totalTrx} Transaksi Selesai</Text>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="shadow-sm border-0 border-start border-4 border-info">
-              <Statistic
-                title="Total Pcs Barang Terjual"
-                value={summary.totalPcs}
-                suffix="pcs"
-                valueStyle={{ fontSize: '20px', fontWeight: 'bold', color: '#13c2c2' }}
-              />
-              <Text type="secondary" className="fs-12">Rata-rata {(summary.totalPcs / 24).toFixed(1)} pcs/jam</Text>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="shadow-sm border-0 border-start border-4 border-warning">
-              <Statistic
-                title="Total Pengeluaran Operasional"
-                value={summary.totalExpense}
-                precision={0}
-                prefix="Rp "
-                valueStyle={{ fontSize: '20px', fontWeight: 'bold', color: '#faad14' }}
-              />
-              <Text type="secondary" className="fs-12">Laba Net: Rp {(summary.totalRevenue - summary.totalExpense).toLocaleString('id-ID')}</Text>
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Visual Hourly Chart Bars & Top Products Side-by-Side */}
-        <Row gutter={[16, 16]} className="mb-4">
-          <Col xs={24} lg={16}>
-            <Card title="📊 Visual Intensitas Omset Penjualan Per Jam (00:00 - 23:00)" className="shadow-sm border-0">
-              <div style={{ maxHeight: '350px', overflowY: 'auto', paddingRight: '8px' }}>
-                {hourlyData.map(h => {
-                  const maxRevenue = Math.max(...hourlyData.map(d => d.totalRevenue), 1);
-                  const percent = Math.min(Math.round((h.totalRevenue / maxRevenue) * 100), 100);
-                  const isPeak = summary.peakHour === h.timeWindow && summary.peakTrxCount > 0;
-
-                  return (
-                    <div key={h.hour} className="mb-3">
-                      <div className="d-flex justify-content-between mb-1 fs-13">
-                        <span>
-                          <strong>{h.timeWindow}</strong> {isPeak && <Tag color="red">🔥</Tag>}
-                        </span>
-                        <span>
-                          <strong>Rp {h.totalRevenue.toLocaleString('id-ID')}</strong> ({h.trxCount} trx, {h.pcsCount} pcs)
-                        </span>
-                      </div>
-                      <Progress
-                        percent={percent}
-                        status={isPeak ? "exception" : (h.totalRevenue > 0 ? "active" : "normal")}
-                        strokeColor={isPeak ? "#ff4d4f" : (h.totalRevenue > 0 ? "#1890ff" : "#d9d9d9")}
-                        showInfo={false}
-                      />
-                    </div>
-                  );
-                })}
+          {/* Card 1: Peak Hour */}
+          <Col xs={24} sm={12} xl={6}>
+            <Card className="border-0 shadow-sm rounded-3 h-100" bodyStyle={{ padding: '20px' }}>
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <div className="d-flex align-items-center mb-1">
+                    <span className="fs-18 fw-bold text-dark">{summary.peakHour}</span>
+                    {summary.peakTrxCount > 0 && (
+                      <span className="badge bg-danger-light text-danger ms-2 fw-bold fs-11">🔥 Peak</span>
+                    )}
+                  </div>
+                  <div className="text-muted fs-13">Jam Teramai Penjualan</div>
+                  <small className="text-secondary fs-11 mt-1 d-block">
+                    {summary.peakTrxCount > 0 ? `${summary.peakTrxCount} Transaksi Selesai` : 'Belum ada transaksi'}
+                  </small>
+                </div>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#F3E8FF', color: '#9333EA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon.Clock size={22} />
+                </div>
               </div>
             </Card>
           </Col>
 
-          <Col xs={24} lg={8}>
-            <Card title="🏆 Top 5 Menu Terlaris Tanggal Ini" className="shadow-sm border-0">
-              {topProducts.length === 0 ? (
-                <div className="text-center py-4 text-muted">Belum ada data penjualan</div>
-              ) : (
-                topProducts.map((p, idx) => (
-                  <div key={idx} className="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
-                    <div className="d-flex align-items-center">
-                      <span className="badge bg-primary rounded-circle me-2">{idx + 1}</span>
-                      <div>
-                        <div className="fw-bold">{p.name}</div>
-                        <small className="text-muted">Terjual {p.qty} pcs</small>
-                      </div>
-                    </div>
-                    <span className="fw-bold text-success">Rp {p.total.toLocaleString('id-ID')}</span>
+          {/* Card 2: Total Omset */}
+          <Col xs={24} sm={12} xl={6}>
+            <Card className="border-0 shadow-sm rounded-3 h-100" bodyStyle={{ padding: '20px' }}>
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <div className="d-flex align-items-center mb-1">
+                    <span className="fs-18 fw-bold text-dark">Rp {summary.totalRevenue.toLocaleString('id-ID')}</span>
+                    <span className="badge bg-success-light text-success ms-2 fw-bold fs-11">Omset</span>
                   </div>
-                ))
+                  <div className="text-muted fs-13">Total Omset Penjualan</div>
+                  <small className="text-secondary fs-11 mt-1 d-block">{summary.totalTrx} Transaksi Selesai</small>
+                </div>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#E0F2FE', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon.DollarSign size={22} />
+                </div>
+              </div>
+            </Card>
+          </Col>
+
+          {/* Card 3: Total Pcs */}
+          <Col xs={24} sm={12} xl={6}>
+            <Card className="border-0 shadow-sm rounded-3 h-100" bodyStyle={{ padding: '20px' }}>
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <div className="d-flex align-items-center mb-1">
+                    <span className="fs-18 fw-bold text-dark">{summary.totalPcs} pcs</span>
+                    <span className="badge bg-info-light text-info ms-2 fw-bold fs-11">Items</span>
+                  </div>
+                  <div className="text-muted fs-13">Total Pcs Barang Terjual</div>
+                  <small className="text-secondary fs-11 mt-1 d-block">Rata-rata {(summary.totalPcs / 24).toFixed(1)} pcs/jam</small>
+                </div>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#FFEDD5', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon.Package size={22} />
+                </div>
+              </div>
+            </Card>
+          </Col>
+
+          {/* Card 4: Pengeluaran */}
+          <Col xs={24} sm={12} xl={6}>
+            <Card className="border-0 shadow-sm rounded-3 h-100" bodyStyle={{ padding: '20px' }}>
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <div className="d-flex align-items-center mb-1">
+                    <span className="fs-18 fw-bold text-dark">Rp {summary.totalExpense.toLocaleString('id-ID')}</span>
+                    <span className="badge bg-warning-light text-warning ms-2 fw-bold fs-11">Beban</span>
+                  </div>
+                  <div className="text-muted fs-13">Total Pengeluaran</div>
+                  <small className="text-secondary fs-11 mt-1 d-block">Laba Net: Rp {(summary.totalRevenue - summary.totalExpense).toLocaleString('id-ID')}</small>
+                </div>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon.TrendingUp size={22} />
+                </div>
+              </div>
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Visual Hourly ApexChart & DreamsPOS Top Selling Items Widget */}
+        <Row gutter={[16, 16]} className="mb-4">
+          <Col xs={24} lg={16}>
+            <Card title="📊 Grafik Omset Penjualan & Transaksi Per Jam (00:00 - 23:00)" className="border-0 shadow-sm rounded-3 h-100">
+              <Chart
+                options={apexChartOptions}
+                series={[
+                  { name: 'Omset Penjualan (Rp)', data: hourlyData.map(h => h.totalRevenue) },
+                  { name: 'Jumlah Transaksi', data: hourlyData.map(h => h.trxCount) }
+                ]}
+                type="bar"
+                height={330}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} lg={8}>
+            <Card title="🏆 Top Selling Items (Menu Terlaris)" className="border-0 shadow-sm rounded-3 h-100">
+              {topProducts.length === 0 ? (
+                <div className="text-center py-5 text-muted">Belum ada data penjualan pada periode ini</div>
+              ) : (
+                <div>
+                  {/* Most Ordered Green Highlight Banner (matching DreamsPOS template) */}
+                  <div className="p-3 mb-3 rounded-3 d-flex align-items-center" style={{ backgroundColor: '#F0FDF4', border: '1px solid #DCFCE7' }}>
+                    <span className="me-2 fs-16">🔥</span>
+                    <div>
+                      <small className="text-success fw-bold d-block fs-11">MOST ORDERED</small>
+                      <span className="fw-bold text-dark fs-13">{topProducts[0]?.name}</span>
+                    </div>
+                  </div>
+
+                  {/* Top Products List with Rank #1, #2, #3, #4, #5 */}
+                  {topProducts.map((p, idx) => {
+                    const colors = ['#3B82F6', '#F59E0B', '#10B981', '#8B5CF6', '#EC4899'];
+                    const color = colors[idx % colors.length];
+                    const maxQty = topProducts[0]?.qty || 1;
+                    const progressPercent = Math.min(Math.round((p.qty / maxQty) * 100), 100);
+
+                    return (
+                      <div key={idx} className="mb-3">
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                          <span className="fw-bold text-dark fs-13">
+                            <span className="text-muted me-1">#{idx + 1}</span> {p.name}
+                          </span>
+                          <span className="fw-bold text-dark fs-13">{p.qty} pcs</span>
+                        </div>
+                        <div className="progress" style={{ height: '6px', borderRadius: '4px', backgroundColor: '#F3F4F6' }}>
+                          <div
+                            className="progress-bar"
+                            role="progressbar"
+                            style={{ width: `${progressPercent}%`, backgroundColor: color, borderRadius: '4px' }}
+                          />
+                        </div>
+                        <div className="text-end mt-1">
+                          <small className="text-muted fs-11">Rp {p.total.toLocaleString('id-ID')}</small>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </Card>
           </Col>
         </Row>
 
         {/* Detailed Table Data */}
-        <Card title="📋 Tabel Rincian Data Omset & Transaksi Per Jam" className="shadow-sm border-0">
+        <Card title="📋 Tabel Rincian Data Omset & Transaksi Per Jam" className="border-0 shadow-sm rounded-3">
           <Table
             columns={columns}
             dataSource={hourlyData}
