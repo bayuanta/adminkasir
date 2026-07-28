@@ -213,10 +213,30 @@ body.mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu > ul > li > a.active 
 }
 
 /* 6. Dewa Emas Header Logo Styling Override */
-.header .header-left .logo img,
-.header .header-left .logo-small img {
+.header .header-left {
+    padding: 0 15px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+.header .header-left .logo img {
+    height: 48px !important;
     width: auto !important;
-    max-width: 100% !important;
+    max-width: 175px !important;
+    object-fit: contain !important;
+}
+
+.header .header-left .logo-small img {
+    height: 38px !important;
+    width: auto !important;
+    max-width: 55px !important;
+    object-fit: contain !important;
+}
+
+body.mini-sidebar:not(.expand-menu) .header .header-left {
+    justify-content: center !important;
+    padding: 0 !important;
 }
 
 body.mini-sidebar:not(.expand-menu) .header .header-left .logo {
@@ -225,8 +245,13 @@ body.mini-sidebar:not(.expand-menu) .header .header-left .logo {
 
 body.mini-sidebar:not(.expand-menu) .header .header-left .logo-small {
     display: flex !important;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+body.mini-sidebar:not(.expand-menu) .header .header-left #toggle_btn {
+    display: none !important;
 }
 
