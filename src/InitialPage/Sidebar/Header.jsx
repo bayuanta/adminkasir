@@ -21,9 +21,6 @@ const Header = () => {
     navigate("/signin");
   };
 
-  const isElementVisible = (element) => {
-    return element.offsetWidth > 0 || element.offsetHeight > 0;
-  };
 
   const slideDownSubmenu = () => {
     const subdropPlusUl = document.getElementsByClassName("subdrop");
