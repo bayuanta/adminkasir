@@ -28,33 +28,42 @@ export const SidebarData = [
         ]
     },
     {
-        label: "Transaksi",
+        label: "Penjualan",
         submenuOpen: true,
-        submenuHdr: "Transaksi",
+        submenuHdr: "Penjualan",
         submenu: false,
         showSubRoute: false,
         submenuItems: [
             { label: "Riwayat Transaksi", link: "/transaction-history", icon: <Icon.List />, showSubRoute: false, submenu: false },
-            { label: "Laporan Transaksi", link: "/sales-list", icon: <Icon.ShoppingCart />, showSubRoute: false, submenu: false },
-            { label: "Hutang & Bahan Baku", link: "/supplier-purchases", icon: <Icon.Truck />, showSubRoute: false, submenu: false },
-            { label: "Laporan Per Jam", link: "/hourly-report", icon: <Icon.Clock />, showSubRoute: false, submenu: false },
-            { label: "Kalender Booking", link: "/calendar", icon: <Icon.Calendar />, showSubRoute: false, submenu: false },
-            { label: "Pengeluaran", link: "/expense-list", icon: <Icon.DollarSign />, showSubRoute: false, submenu: false }
+            { label: "Kalender Booking", link: "/calendar", icon: <Icon.Calendar />, showSubRoute: false, submenu: false }
         ]
     },
     {
-        label: "Akuntansi",
+        label: "Keuangan & Kas",
         submenuOpen: true,
-        submenuHdr: "Akuntansi",
+        submenuHdr: "Keuangan & Kas",
         submenu: false,
         showSubRoute: false,
         submenuItems: [
+            { label: "Hutang & Bahan Baku", link: "/supplier-purchases", icon: <Icon.Truck />, showSubRoute: false, submenu: false },
+            { label: "Pengeluaran", link: "/expense-list", icon: <Icon.DollarSign />, showSubRoute: false, submenu: false },
             { label: "Rekening & Kas", link: "/accounts", icon: <Icon.Briefcase />, showSubRoute: false, submenu: false },
             { label: "Buku Besar (COA)", link: "/coa", icon: <Icon.Book />, showSubRoute: false, submenu: false },
-            { label: "Input Jurnal", link: "/journal-entry", icon: <Icon.Edit3 />, showSubRoute: false, submenu: false },
+            { label: "Input Jurnal", link: "/journal-entry", icon: <Icon.Edit3 />, showSubRoute: false, submenu: false }
+        ]
+    },
+    {
+        label: "Laporan",
+        submenuOpen: true,
+        submenuHdr: "Laporan",
+        submenu: false,
+        showSubRoute: false,
+        submenuItems: [
+            { label: "Laporan Transaksi", link: "/sales-list", icon: <Icon.ShoppingCart />, showSubRoute: false, submenu: false },
+            { label: "Laporan Per Jam", link: "/hourly-report", icon: <Icon.Clock />, showSubRoute: false, submenu: false },
             { label: "Laporan Buku Besar", link: "/general-ledger", icon: <Icon.FileText />, showSubRoute: false, submenu: false },
             { label: "Neraca Saldo", link: "/trial-balance", icon: <Icon.List />, showSubRoute: false, submenu: false },
-            { label: "Laba / Rugi (P&L)", link: "/profit-loss", icon: <Icon.PieChart />, showSubRoute: false, submenu: false },
+            { label: "Laporan Laba Rugi", link: "/profit-loss", icon: <Icon.PieChart />, showSubRoute: false, submenu: false },
             { label: "Neraca Keuangan", link: "/balance-sheet", icon: <Icon.Columns />, showSubRoute: false, submenu: false }
         ]
     },
