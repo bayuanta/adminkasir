@@ -180,9 +180,17 @@ const GeneralLedger = () => {
         });
       });
 
-      // 3. Build postings from Supplier Purchases & Hutang
+      // Collect existing journal references to avoid duplicates
+      const jrnRefs = new Set((jLines || []).map(jl => jl.journal_entries?.reference).filter(Boolean));
+
+      // 3. Build postings from Supplier Purchases & Hutang (ONLY if not already present in journal_lines)
       (purs || []).forEach(p => {
-        const shortId = (p.reference_no || p.id).slice(0, 8).toUpperCase();
+        const refStr = p.reference_no || `PUR-${p.id.slice(0, 8).toUpperCase()}`;
+        if (jrnRefs.has(refStr) || jrnRefs.has(p.reference_no)) {
+          // Skip because journal_lines already has the exact postings for this purchase!
+          return;
+        }
+
         const amt = Number(p.total_amount) || 0;
         const isPaid = p.payment_status === 'paid';
         const pMethod = (p.payment_method || 'cash').toLowerCase();
@@ -192,7 +200,7 @@ const GeneralLedger = () => {
         entries.push({
           id: `pur-deb-${p.id}`,
           date: p.purchase_date,
-          ref: p.reference_no || `PUR-${shortId}`,
+          ref: refStr,
           coa_id: bebanBahanBakuCoa.id,
           account_code: bebanBahanBakuCoa.account_code,
           account_name: bebanBahanBakuCoa.account_name,
@@ -207,7 +215,7 @@ const GeneralLedger = () => {
           entries.push({
             id: `pur-cred-hut-${p.id}`,
             date: p.purchase_date,
-            ref: p.reference_no || `PUR-${shortId}`,
+            ref: refStr,
             coa_id: hutangUsahaCoa.id,
             account_code: hutangUsahaCoa.account_code,
             account_name: hutangUsahaCoa.account_name,
@@ -221,7 +229,7 @@ const GeneralLedger = () => {
           entries.push({
             id: `pur-cred-kas-${p.id}`,
             date: p.purchase_date,
-            ref: p.reference_no || `PUR-${shortId}`,
+            ref: refStr,
             coa_id: assetCoa.id,
             account_code: assetCoa.account_code,
             account_name: assetCoa.account_name,
@@ -238,7 +246,7 @@ const GeneralLedger = () => {
           entries.push({
             id: `pay-deb-hut-${p.id}`,
             date: p.payment_date,
-            ref: `PAY-${shortId}`,
+            ref: `PAY-${p.id.slice(0, 8).toUpperCase()}`,
             coa_id: hutangUsahaCoa.id,
             account_code: hutangUsahaCoa.account_code,
             account_name: hutangUsahaCoa.account_name,
@@ -252,7 +260,7 @@ const GeneralLedger = () => {
           entries.push({
             id: `pay-cred-kas-${p.id}`,
             date: p.payment_date,
-            ref: `PAY-${shortId}`,
+            ref: `PAY-${p.id.slice(0, 8).toUpperCase()}`,
             coa_id: assetCoa.id,
             account_code: assetCoa.account_code,
             account_name: assetCoa.account_name,
