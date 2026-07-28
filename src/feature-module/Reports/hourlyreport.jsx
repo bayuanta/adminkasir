@@ -5,12 +5,13 @@ import { StoreContext } from "../../core/context/StoreContext";
 import * as Icon from 'react-feather';
 import dayjs from 'dayjs';
 
+const { RangePicker } = DatePicker;
 const { Title, Text } = Typography;
 
 const HourlyReport = () => {
   const { selectedStore } = useContext(StoreContext);
   const [loading, setLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(dayjs());
+  const [dateRange, setDateRange] = useState([dayjs().startOf('day'), dayjs().endOf('day')]);
   
   // Aggregated Hourly Data (0 to 23)
   const [hourlyData, setHourlyData] = useState([]);
@@ -38,28 +39,27 @@ const HourlyReport = () => {
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate, selectedStore]);
+  }, [dateRange, selectedStore]);
 
   const fetchHourlyReport = async () => {
     setLoading(true);
     try {
-      const targetDate = selectedDate || dayjs();
-      const startOfDay = targetDate.startOf('day').toISOString();
-      const endOfDay = targetDate.endOf('day').toISOString();
+      const startDate = dateRange && dateRange[0] ? dateRange[0].startOf('day').toISOString() : dayjs().startOf('month').toISOString();
+      const endDate = dateRange && dateRange[1] ? dateRange[1].endOf('day').toISOString() : dayjs().endOf('day').toISOString();
 
-      // Query transactions & items for selected date
+      // Query transactions & items for selected date range
       let trxQuery = supabase
         .from('transactions')
         .select('*, transaction_items(*, products(*))')
-        .gte('created_at', startOfDay)
-        .lte('created_at', endOfDay)
+        .gte('created_at', startDate)
+        .lte('created_at', endDate)
         .eq('status', 'completed');
 
       let expQuery = supabase
         .from('expenses')
         .select('*')
-        .gte('created_at', startOfDay)
-        .lte('created_at', endOfDay);
+        .gte('created_at', startDate)
+        .lte('created_at', endDate);
 
       if (selectedStore) {
         trxQuery = trxQuery.eq('branch_id', selectedStore);
@@ -260,19 +260,19 @@ const HourlyReport = () => {
         {/* Filter Date Bar */}
         <Card className="mb-4 shadow-sm border-0">
           <div className="row align-items-center">
-            <div className="col-md-5">
-              <label className="form-label fw-bold">Pilih Tanggal Laporan:</label>
-              <DatePicker
+            <div className="col-md-6">
+              <label className="form-label fw-bold">Pilih Rentang Tanggal Laporan (Dari - Sampai):</label>
+              <RangePicker
                 style={{ width: '100%' }}
-                value={selectedDate}
-                onChange={(d) => setSelectedDate(d || dayjs())}
-                format="DD MMMM YYYY"
+                value={dateRange}
+                onChange={(dates) => setDateRange(dates || [dayjs().startOf('day'), dayjs().endOf('day')])}
+                format="DD/MM/YYYY"
                 allowClear={false}
               />
             </div>
-            <div className="col-md-7 text-end mt-3 mt-md-0">
+            <div className="col-md-6 text-end mt-3 mt-md-0">
               <Tag color="cyan" className="fs-13 p-2 fw-bold">
-                🗓️ Laporan Tanggal: {selectedDate.format('DD MMMM YYYY')}
+                🗓️ Periode: {dateRange && dateRange[0] ? dateRange[0].format('DD MMM YYYY') : '-'} s/d {dateRange && dateRange[1] ? dateRange[1].format('DD MMM YYYY') : '-'}
               </Tag>
             </div>
           </div>
