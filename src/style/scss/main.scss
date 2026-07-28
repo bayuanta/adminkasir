@@ -218,10 +218,15 @@ body.mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu > ul > li > a.active 
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
+    transition: all 0.2s ease !important;
+}
+
+/* Expanded mode: show .logo, hide .logo-small, set width 260px */
+body:not(.mini-sidebar) .header .header-left,
+body.mini-sidebar.expand-menu .header .header-left {
     width: 260px !important;
 }
 
-/* Expanded mode: show .logo, hide .logo-small */
 body:not(.mini-sidebar) .header .header-left .logo,
 body.mini-sidebar.expand-menu .header .header-left .logo {
     display: flex !important;
@@ -247,7 +252,7 @@ body.mini-sidebar.expand-menu .header .header-left .logo-small {
     object-fit: contain !important;
 }
 
-/* Mini mode: hide .logo, show .logo-small */
+/* Mini mode: hide .logo, show .logo-small, set width 80px */
 body.mini-sidebar:not(.expand-menu) .header .header-left {
     justify-content: center !important;
     padding: 0 !important;

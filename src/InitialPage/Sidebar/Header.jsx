@@ -46,19 +46,11 @@ const Header = () => {
   };
 
   useEffect(() => {
-    // Set default mini-sidebar
-    document.body.classList.add("mini-sidebar");
-
     const handleMouseover = (e) => {
       e.stopPropagation();
 
       const body = document.body;
-      const toggleBtn = document.getElementById("toggle_btn");
-
-      if (
-        body.classList.contains("mini-sidebar") &&
-        isElementVisible(toggleBtn)
-      ) {
+      if (body.classList.contains("mini-sidebar")) {
         const target = e.target.closest(".sidebar, .header-left");
 
         if (target) {
@@ -68,8 +60,6 @@ const Header = () => {
           body.classList.remove("expand-menu");
           slideUpSubmenu();
         }
-
-        e.preventDefault();
       }
     };
 
