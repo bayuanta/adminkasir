@@ -41,14 +41,17 @@ const TrialBalance = () => {
 
       let trxQuery = supabase.from('transactions').select('total_amount, payment_method').lte('created_at', endDateIso);
       let expQuery = supabase.from('expenses').select('amount, category, expense_category').lte('created_at', endDateIso);
+      let purQuery = supabase.from('supplier_purchases').select('total_amount, paid_amount, payment_status, payment_method').lte('created_at', endDateIso);
 
       if (selectedStore) {
         trxQuery = trxQuery.eq('branch_id', selectedStore);
         expQuery = expQuery.eq('branch_id', selectedStore);
+        purQuery = purQuery.eq('branch_id', selectedStore);
       }
 
       const { data: trxs } = await trxQuery;
       const { data: exps } = await expQuery;
+      const { data: purs } = await purQuery;
 
       let totalSales = 0;
       let cashSales = 0;
@@ -66,37 +69,69 @@ const TrialBalance = () => {
         totalExp += (e.amount || 0);
       });
 
+      let totalPurchases = 0;
+      let totalUnpaidHutang = 0;
+      let paidPurchasesCash = 0;
+      let paidPurchasesBank = 0;
+
+      (purs || []).forEach(p => {
+        const amt = Number(p.total_amount) || 0;
+        totalPurchases += amt;
+        if (p.payment_status === 'unpaid') {
+          totalUnpaidHutang += amt;
+        } else {
+          if (p.payment_method === 'bank') paidPurchasesBank += amt;
+          else paidPurchasesCash += amt;
+        }
+      });
+
       const rows = [
         {
-          key: '10100',
-          account_code: '10100',
+          key: '1-1000',
+          account_code: '1-1000',
           account_name: 'Kas Tunai POS Utama',
           account_type: 'Asset (Aktiva)',
-          debit: Math.max(0, cashSales - totalExp),
+          debit: Math.max(0, cashSales - totalExp - paidPurchasesCash),
           credit: 0
         },
         {
-          key: '10200',
-          account_code: '10200',
-          account_name: 'Bank / QRIS Rekening Pembayaran',
+          key: '1-1100',
+          account_code: '1-1100',
+          account_name: 'Bank BCA / QRIS Pembayaran',
           account_type: 'Asset (Aktiva)',
-          debit: qrisSales,
+          debit: Math.max(0, qrisSales - paidPurchasesBank),
           credit: 0
         },
         {
-          key: '40100',
-          account_code: '40100',
+          key: '2-1000',
+          account_code: '2-1000',
+          account_name: 'Hutang Usaha Supplier',
+          account_type: 'Liability (Kewajiban)',
+          debit: 0,
+          credit: totalUnpaidHutang
+        },
+        {
+          key: '4-1000',
+          account_code: '4-1000',
           account_name: 'Pendapatan Penjualan Kasir POS',
           account_type: 'Revenue (Pendapatan)',
           debit: 0,
           credit: totalSales
         },
         {
-          key: '50100',
-          account_code: '50100',
+          key: '6-4000',
+          account_code: '6-4000',
           account_name: 'Beban Operasional Kasir',
           account_type: 'Expense (Beban)',
           debit: totalExp,
+          credit: 0
+        },
+        {
+          key: '6-5000',
+          account_code: '6-5000',
+          account_name: 'Beban Pembelian Bahan Baku',
+          account_type: 'Expense (Beban)',
+          debit: totalPurchases,
           credit: 0
         }
       ];

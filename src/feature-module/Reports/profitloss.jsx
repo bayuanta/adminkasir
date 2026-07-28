@@ -48,14 +48,17 @@ const ProfitLoss = () => {
 
       let trxQuery = supabase.from('transactions').select('total_amount, payment_method').gte('created_at', startDateIso).lte('created_at', endDateIso);
       let expQuery = supabase.from('expenses').select('amount, category, expense_category, description').gte('created_at', startDateIso).lte('created_at', endDateIso);
+      let purQuery = supabase.from('supplier_purchases').select('total_amount, supplier_name, description').gte('purchase_date', startDateIso).lte('purchase_date', endDateIso);
 
       if (selectedStore) {
         trxQuery = trxQuery.eq('branch_id', selectedStore);
         expQuery = expQuery.eq('branch_id', selectedStore);
+        purQuery = purQuery.eq('branch_id', selectedStore);
       }
 
       const { data: trxs } = await trxQuery;
       const { data: exps } = await expQuery;
+      const { data: purs } = await purQuery;
 
       let cashSales = 0;
       let qrisSales = 0;
@@ -78,25 +81,37 @@ const ProfitLoss = () => {
         expCategories[cat] = (expCategories[cat] || 0) + amt;
       });
 
+      let totalPurchases = 0;
+      (purs || []).forEach(p => {
+        const amt = Number(p.total_amount) || 0;
+        totalPurchases += amt;
+      });
+
+      if (totalPurchases > 0) {
+        expCategories['Pembelian Bahan Baku Supplier'] = totalPurchases;
+      }
+
       const revRows = [
-        { key: 'rev-cash', code: '40101', name: 'Pendapatan Penjualan Kas (Tunai)', amount: cashSales },
-        { key: 'rev-qris', code: '40102', name: 'Pendapatan Penjualan Non-Tunai (QRIS/Bank)', amount: qrisSales },
+        { key: 'rev-cash', code: '4-1001', name: 'Pendapatan Penjualan Kas (Tunai)', amount: cashSales },
+        { key: 'rev-qris', code: '4-1002', name: 'Pendapatan Penjualan Non-Tunai (QRIS/Bank)', amount: qrisSales },
       ];
 
       const expRows = Object.keys(expCategories).map((catName, idx) => ({
         key: `exp-${idx}`,
-        code: `5010${idx + 1}`,
-        name: `Beban ${catName}`,
+        code: catName.includes('Bahan Baku') ? '6-5000' : `6-400${idx + 1}`,
+        name: catName.startsWith('Beban') ? catName : `Beban ${catName}`,
         amount: expCategories[catName]
       }));
 
+      const grandTotalExp = totalExp + totalPurchases;
+
       setRevenueData(revRows);
-      setExpenseData(expRows.length > 0 ? expRows : [{ key: 'exp-empty', code: '50100', name: 'Beban Operasional', amount: totalExp }]);
+      setExpenseData(expRows.length > 0 ? expRows : [{ key: 'exp-empty', code: '6-4000', name: 'Beban Operasional', amount: grandTotalExp }]);
 
       setSummary({
         grossIncome: totalRev,
-        totalExpenses: totalExp,
-        netProfit: totalRev - totalExp
+        totalExpenses: grandTotalExp,
+        netProfit: totalRev - grandTotalExp
       });
     } catch (err) {
       console.error("Error fetching profit and loss:", err);

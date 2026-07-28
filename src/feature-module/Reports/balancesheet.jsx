@@ -44,14 +44,17 @@ const BalanceSheet = () => {
 
       let trxQuery = supabase.from('transactions').select('total_amount, payment_method').lte('created_at', endDateIso);
       let expQuery = supabase.from('expenses').select('amount').lte('created_at', endDateIso);
+      let purQuery = supabase.from('supplier_purchases').select('total_amount, paid_amount, payment_status, payment_method').lte('created_at', endDateIso);
 
       if (selectedStore) {
         trxQuery = trxQuery.eq('branch_id', selectedStore);
         expQuery = expQuery.eq('branch_id', selectedStore);
+        purQuery = purQuery.eq('branch_id', selectedStore);
       }
 
       const { data: trxs } = await trxQuery;
       const { data: exps } = await expQuery;
+      const { data: purs } = await purQuery;
 
       let totalSales = 0;
       let cashSales = 0;
@@ -69,29 +72,53 @@ const BalanceSheet = () => {
         totalExp += (e.amount || 0);
       });
 
-      const netIncome = totalSales - totalExp;
+      let totalPurchases = 0;
+      let totalUnpaidHutang = 0;
+      let paidPurchasesCash = 0;
+      let paidPurchasesBank = 0;
+
+      (purs || []).forEach(p => {
+        const amt = Number(p.total_amount) || 0;
+        totalPurchases += amt;
+        if (p.payment_status === 'unpaid') {
+          totalUnpaidHutang += amt;
+        } else {
+          if (p.payment_method === 'bank') paidPurchasesBank += amt;
+          else paidPurchasesCash += amt;
+        }
+      });
+
+      const netIncome = totalSales - totalExp - totalPurchases;
 
       const tempAssets = [
         {
-          key: '10100',
-          account_code: '10100',
-          account_name: 'Kas Tunai POS (Saldo Kasir)',
-          balance: Math.max(0, cashSales - totalExp)
+          key: '1-1000',
+          account_code: '1-1000',
+          account_name: 'Kas Tunai POS Utama',
+          balance: Math.max(0, cashSales - totalExp - paidPurchasesCash)
         },
         {
-          key: '10200',
-          account_code: '10200',
-          account_name: 'Rekening Bank / QRIS Pembayaran',
-          balance: qrisSales
+          key: '1-1100',
+          account_code: '1-1100',
+          account_name: 'Bank BCA / QRIS Pembayaran',
+          balance: Math.max(0, qrisSales - paidPurchasesBank)
         }
       ];
 
-      const tempLiabilities = [];
+      const tempLiabilities = [
+        {
+          key: '2-1000',
+          account_code: '2-1000',
+          account_name: 'Hutang Usaha Supplier (Belum Lunas)',
+          balance: totalUnpaidHutang
+        }
+      ];
+
       const tempEquities = [
         {
-          key: '30100',
-          account_code: '30100',
-          account_name: 'Laba Ditahan Periode Berjalan (Net Profit)',
+          key: '3-2000',
+          account_code: '3-2000',
+          account_name: 'Laba Ditahan / Net Profit Berjalan',
           balance: netIncome
         }
       ];

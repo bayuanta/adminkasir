@@ -75,18 +75,23 @@ const GeneralLedger = () => {
       let expQuery = supabase.from('expenses').select('*').gte('created_at', startDate).lte('created_at', endDate).order('created_at', { ascending: true });
       let jlQuery = supabase.from('journal_lines').select('*, journal_entries!inner(*), coa(*)').order('created_at', { ascending: true });
 
+      let purQuery = supabase.from('supplier_purchases').select('*').gte('purchase_date', startDate).lte('purchase_date', endDate).order('purchase_date', { ascending: true });
+
       if (selectedStore) {
         trxQuery = trxQuery.eq('branch_id', selectedStore);
         expQuery = expQuery.eq('branch_id', selectedStore);
+        purQuery = purQuery.eq('branch_id', selectedStore);
       }
 
       const { data: trxs } = await trxQuery;
       const { data: exps } = await expQuery;
       const { data: jLines } = await jlQuery;
+      const { data: purs } = await purQuery;
 
       // Find standard COA objects from loaded COA list
       const kasKasirCoa = activeCoas.find(c => c.account_code === '1-1000') || { id: 'kas-1', account_code: '1-1000', account_name: 'Kas Tunai POS Utama' };
       const bankQrisCoa = activeCoas.find(c => c.account_code === '1-1100') || { id: 'bank-1', account_code: '1-1100', account_name: 'Bank BCA / QRIS Pembayaran' };
+      const hutangUsahaCoa = activeCoas.find(c => c.account_code === '2-1000') || { id: 'hut-1', account_code: '2-1000', account_name: 'Hutang Usaha' };
       const pendapatanCoa = activeCoas.find(c => c.account_code === '4-1000') || { id: 'rev-1', account_code: '4-1000', account_name: 'Pendapatan Penjualan' };
       const bebanKasirCoa = activeCoas.find(c => c.account_code === '6-4000') || { id: 'exp-1', account_code: '6-4000', account_name: 'Beban Operasional Kasir' };
       const bebanBahanBakuCoa = activeCoas.find(c => c.account_code === '6-5000') || { id: 'exp-2', account_code: '6-5000', account_name: 'Beban Pembelian Bahan Baku' };

@@ -124,8 +124,7 @@ const SupplierPurchases = () => {
         branch_id: purchasePayload.branch_id,
         entry_date: purchasePayload.purchase_date,
         reference: refNo,
-        description: `Pembelian Bahan Baku - ${values.supplier_name} (${isPaid ? 'Lunas' : 'Hutang'})`,
-        status: 'posted'
+        description: `Pembelian Bahan Baku - ${values.supplier_name} (${isPaid ? 'Lunas' : 'Hutang'})`
       };
 
       const { data: newJrn, error: jrnErr } = await supabase
@@ -133,6 +132,8 @@ const SupplierPurchases = () => {
         .insert([journalHeader])
         .select()
         .single();
+
+      if (jrnErr) console.error("Journal header insert error:", jrnErr);
 
       if (!jrnErr && newJrn) {
         const jLines = [
@@ -198,8 +199,7 @@ const SupplierPurchases = () => {
         branch_id: selectedPurchase.branch_id,
         entry_date: values.payment_date ? values.payment_date.toISOString() : new Date().toISOString(),
         reference: refNo,
-        description: `Pelunasan Hutang Supplier ${selectedPurchase.supplier_name} (${refNo})`,
-        status: 'posted'
+        description: `Pelunasan Hutang Supplier ${selectedPurchase.supplier_name} (${refNo})`
       };
 
       const { data: newJrn, error: jrnErr } = await supabase
