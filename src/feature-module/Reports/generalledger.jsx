@@ -41,7 +41,7 @@ const GeneralLedger = () => {
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCoa, dateRange, selectedStore, coasList]);
+  }, [selectedCoa, dateRange, selectedStore]);
 
   const fetchCOA = async () => {
     try {
@@ -59,14 +59,13 @@ const GeneralLedger = () => {
   const fetchLedger = async () => {
     setLoading(true);
     try {
-      // Fetch COA list directly inside fetchLedger to guarantee exact match
+      // Fetch active COAs locally for mapping
       let coaQuery = supabase.from('coa').select('*').eq('is_active', true).order('account_code');
       if (selectedStore) {
         coaQuery = coaQuery.or(`branch_id.eq.${selectedStore},branch_id.is.null`);
       }
       const { data: coaData } = await coaQuery;
-      const activeCoas = coaData || [];
-      setCoasList(activeCoas);
+      const activeCoas = coaData || coasList;
 
       const startDate = dateRange && dateRange[0] ? dateRange[0].startOf('day').toISOString() : dayjs().startOf('year').toISOString();
       const endDate = dateRange && dateRange[1] ? dateRange[1].endOf('day').toISOString() : dayjs().endOf('year').toISOString();
