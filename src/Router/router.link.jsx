@@ -129,6 +129,7 @@ import Managestock from "../feature-module/stock/managestock";
 import StockAdjustment from "../feature-module/stock/stockAdjustment";
 import StockTransfer from "../feature-module/stock/stockTransfer";
 import SalesReport from "../feature-module/Reports/salesreport";
+import HourlyReport from "../feature-module/Reports/hourlyreport";
 import PurchaseReport from "../feature-module/Reports/purchasereport";
 import InventoryReport from "../feature-module/Reports/inventoryreport";
 import Invoicereport from "../feature-module/Reports/invoicereport";
@@ -1104,6 +1105,13 @@ export const publicRoutes = [
     path: routes.salesreport,
     name: "salesreport",
     element: <SalesReport />,
+    route: Route,
+  },
+  {
+    id: 905,
+    path: routes.hourlyreport,
+    name: "hourlyreport",
+    element: <HourlyReport />,
     route: Route,
   },
   {

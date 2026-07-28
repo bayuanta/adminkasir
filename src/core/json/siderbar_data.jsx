@@ -36,6 +36,7 @@ export const SidebarData = [
         submenuItems: [
             { label: "Riwayat Transaksi", link: "/transaction-history", icon: <Icon.List />, showSubRoute: false, submenu: false },
             { label: "Laporan Transaksi", link: "/sales-list", icon: <Icon.ShoppingCart />, showSubRoute: false, submenu: false },
+            { label: "Laporan Per Jam", link: "/hourly-report", icon: <Icon.Clock />, showSubRoute: false, submenu: false },
             { label: "Kalender Booking", link: "/calendar", icon: <Icon.Calendar />, showSubRoute: false, submenu: false },
             { label: "Pengeluaran", link: "/expense-list", icon: <Icon.DollarSign />, showSubRoute: false, submenu: false }
         ]

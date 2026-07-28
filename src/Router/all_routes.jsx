@@ -99,6 +99,7 @@ export const all_routes = {
   coa: "/coa",
   journalentry: "/journal-entry",
   generalledger: "/general-ledger",
+  hourlyreport: "/hourly-report",
   trialbalance: "/trial-balance",
   balancesheet: "/balance-sheet",
   profitloss: "/profit-loss",
