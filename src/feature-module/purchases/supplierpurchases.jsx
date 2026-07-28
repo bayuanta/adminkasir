@@ -107,7 +107,7 @@ const SupplierPurchases = () => {
         notes: values.notes || null,
       };
 
-      const { data: newPur, error: purErr } = await supabase
+      const { error: purErr } = await supabase
         .from('supplier_purchases')
         .insert([purchasePayload])
         .select()
