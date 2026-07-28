@@ -74,19 +74,23 @@ const GeneralLedger = () => {
       let trxQuery = supabase.from('transactions').select('*').gte('created_at', startDate).lte('created_at', endDate).order('created_at', { ascending: true });
       let expQuery = supabase.from('expenses').select('*').gte('created_at', startDate).lte('created_at', endDate).order('created_at', { ascending: true });
       let jlQuery = supabase.from('journal_lines').select('*, journal_entries!inner(*), coa(*)').order('created_at', { ascending: true });
+      let purQuery = supabase.from('supplier_purchases').select('*').gte('purchase_date', startDate).lte('purchase_date', endDate).order('purchase_date', { ascending: true });
 
       if (selectedStore) {
         trxQuery = trxQuery.eq('branch_id', selectedStore);
         expQuery = expQuery.eq('branch_id', selectedStore);
+        purQuery = purQuery.eq('branch_id', selectedStore);
       }
 
       const { data: trxs } = await trxQuery;
       const { data: exps } = await expQuery;
       const { data: jLines } = await jlQuery;
+      const { data: purs } = await purQuery;
 
       // Find standard COA objects from loaded COA list
       const kasKasirCoa = activeCoas.find(c => c.account_code === '1-1000') || { id: 'kas-1', account_code: '1-1000', account_name: 'Kas Tunai POS Utama' };
       const bankQrisCoa = activeCoas.find(c => c.account_code === '1-1100') || { id: 'bank-1', account_code: '1-1100', account_name: 'Bank BCA / QRIS Pembayaran' };
+      const hutangUsahaCoa = activeCoas.find(c => c.account_code === '2-1000') || { id: 'hut-1', account_code: '2-1000', account_name: 'Hutang Usaha' };
       const pendapatanCoa = activeCoas.find(c => c.account_code === '4-1000') || { id: 'rev-1', account_code: '4-1000', account_name: 'Pendapatan Penjualan' };
       const bebanKasirCoa = activeCoas.find(c => c.account_code === '6-4000') || { id: 'exp-1', account_code: '6-4000', account_name: 'Beban Operasional Kasir' };
       const bebanBahanBakuCoa = activeCoas.find(c => c.account_code === '6-5000') || { id: 'exp-2', account_code: '6-5000', account_name: 'Beban Pembelian Bahan Baku' };
@@ -174,6 +178,90 @@ const GeneralLedger = () => {
           debit: 0,
           credit: amt,
         });
+      });
+
+      // 3. Build postings from Supplier Purchases & Hutang
+      (purs || []).forEach(p => {
+        const shortId = (p.reference_no || p.id).slice(0, 8).toUpperCase();
+        const amt = Number(p.total_amount) || 0;
+        const isPaid = p.payment_status === 'paid';
+        const pMethod = (p.payment_method || 'cash').toLowerCase();
+        const assetCoa = pMethod === 'bank' ? bankQrisCoa : kasKasirCoa;
+
+        // Debit: Beban Pembelian Bahan Baku
+        entries.push({
+          id: `pur-deb-${p.id}`,
+          date: p.purchase_date,
+          ref: p.reference_no || `PUR-${shortId}`,
+          coa_id: bebanBahanBakuCoa.id,
+          account_code: bebanBahanBakuCoa.account_code,
+          account_name: bebanBahanBakuCoa.account_name,
+          account: `[${bebanBahanBakuCoa.account_code}] ${bebanBahanBakuCoa.account_name}`,
+          description: `Pembelian Bahan Baku - ${p.supplier_name} (${p.description || ''})`,
+          debit: amt,
+          credit: 0,
+        });
+
+        if (!isPaid) {
+          // Credit: Hutang Usaha
+          entries.push({
+            id: `pur-cred-hut-${p.id}`,
+            date: p.purchase_date,
+            ref: p.reference_no || `PUR-${shortId}`,
+            coa_id: hutangUsahaCoa.id,
+            account_code: hutangUsahaCoa.account_code,
+            account_name: hutangUsahaCoa.account_name,
+            account: `[${hutangUsahaCoa.account_code}] ${hutangUsahaCoa.account_name}`,
+            description: `Hutang Supplier - ${p.supplier_name} (${p.description || ''})`,
+            debit: 0,
+            credit: amt,
+          });
+        } else {
+          // Credit: Kas/Bank
+          entries.push({
+            id: `pur-cred-kas-${p.id}`,
+            date: p.purchase_date,
+            ref: p.reference_no || `PUR-${shortId}`,
+            coa_id: assetCoa.id,
+            account_code: assetCoa.account_code,
+            account_name: assetCoa.account_name,
+            account: `[${assetCoa.account_code}] ${assetCoa.account_name}`,
+            description: `Pembelian Bahan Baku Tunai - ${p.supplier_name}`,
+            debit: 0,
+            credit: amt,
+          });
+        }
+
+        // If debt paid later (Pelunasan Hutang)
+        if (isPaid && p.payment_date && p.payment_date !== p.purchase_date) {
+          // Debit: Hutang Usaha (Mengurangi Hutang)
+          entries.push({
+            id: `pay-deb-hut-${p.id}`,
+            date: p.payment_date,
+            ref: `PAY-${shortId}`,
+            coa_id: hutangUsahaCoa.id,
+            account_code: hutangUsahaCoa.account_code,
+            account_name: hutangUsahaCoa.account_name,
+            account: `[${hutangUsahaCoa.account_code}] ${hutangUsahaCoa.account_name}`,
+            description: `Pelunasan Hutang Supplier - ${p.supplier_name}`,
+            debit: amt,
+            credit: 0,
+          });
+
+          // Credit: Kas/Bank (Mengurangi Kas)
+          entries.push({
+            id: `pay-cred-kas-${p.id}`,
+            date: p.payment_date,
+            ref: `PAY-${shortId}`,
+            coa_id: assetCoa.id,
+            account_code: assetCoa.account_code,
+            account_name: assetCoa.account_name,
+            account: `[${assetCoa.account_code}] ${assetCoa.account_name}`,
+            description: `Pelunasan Hutang Supplier - ${p.supplier_name}`,
+            debit: 0,
+            credit: amt,
+          });
+        }
       });
 
       // 3. Build postings from Manual Journal Entries (journal_lines)
