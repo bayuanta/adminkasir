@@ -175,7 +175,7 @@ const HourlyReport = () => {
       title: 'Rentang Jam (WIB)',
       dataIndex: 'timeWindow',
       key: 'timeWindow',
-      render: (text, record) => {
+      render: (text) => {
         const isPeak = summary.peakHour === text && summary.peakTrxCount > 0;
         return (
           <Space>
