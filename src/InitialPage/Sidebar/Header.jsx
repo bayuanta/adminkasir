@@ -178,14 +178,40 @@ const Header = () => {
           onMouseLeave={expandMenu}
           onMouseOver={expandMenuOpen}
         >
-          <Link to="/" className="logo logo-normal">
-            <ImageWithBasePath src="assets/img/logo_dewa_emas.png" alt="Dewa Emas POS" />
+          <Link to="/" className="logo logo-normal d-flex align-items-center gap-2 text-decoration-none">
+            <ImageWithBasePath src="assets/img/logo_dewa_emas.png" alt="Dewa Emas" style={{ height: "40px", width: "auto", objectFit: "contain" }} />
+            <div className="d-flex flex-column justify-content-center text-start lh-1" style={{ textAlign: "left" }}>
+              <div className="d-flex align-items-center gap-1">
+                <span style={{ fontSize: "17px", fontWeight: "700", color: "#1E293B", fontFamily: "'Outfit', sans-serif", letterSpacing: "-0.3px", whiteSpace: "nowrap" }}>
+                  Dewa Emas
+                </span>
+                <span className="badge" style={{ fontSize: "10px", fontWeight: "800", backgroundColor: "#FFEAD5", color: "#EA580C", padding: "3px 6px", borderRadius: "4px" }}>
+                  POS
+                </span>
+              </div>
+              <span style={{ fontSize: "10px", color: "#64748B", fontWeight: "500", marginTop: "3px", whiteSpace: "nowrap" }}>
+                Desa Wisata Kemasan
+              </span>
+            </div>
           </Link>
-          <Link to="/" className="logo logo-white">
-            <ImageWithBasePath src="assets/img/logo_dewa_emas.png" alt="Dewa Emas POS" />
+          <Link to="/" className="logo logo-white d-flex align-items-center gap-2 text-decoration-none">
+            <ImageWithBasePath src="assets/img/logo_dewa_emas.png" alt="Dewa Emas" style={{ height: "40px", width: "auto", objectFit: "contain" }} />
+            <div className="d-flex flex-column justify-content-center text-start lh-1" style={{ textAlign: "left" }}>
+              <div className="d-flex align-items-center gap-1">
+                <span className="text-white" style={{ fontSize: "17px", fontWeight: "700", letterSpacing: "-0.3px", whiteSpace: "nowrap" }}>
+                  Dewa Emas
+                </span>
+                <span className="badge bg-warning text-dark" style={{ fontSize: "10px", fontWeight: "800", padding: "3px 6px", borderRadius: "4px" }}>
+                  POS
+                </span>
+              </div>
+              <span style={{ fontSize: "10px", color: "#94A3B8", fontWeight: "500", marginTop: "3px", whiteSpace: "nowrap" }}>
+                Desa Wisata Kemasan
+              </span>
+            </div>
           </Link>
-          <Link to="/" className="logo-small">
-            <ImageWithBasePath src="assets/img/logo_dewa_emas.png" alt="Dewa Emas POS" />
+          <Link to="/" className="logo-small d-flex align-items-center justify-content-center">
+            <ImageWithBasePath src="assets/img/logo_dewa_emas.png" alt="Dewa Emas" style={{ height: "36px", width: "auto", objectFit: "contain" }} />
           </Link>
           <Link
             id="toggle_btn"
