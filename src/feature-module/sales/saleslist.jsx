@@ -29,14 +29,14 @@ const SalesList = () => {
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStore]);
+  }, [selectedStore, dateRange]);
 
   const fetchTransactions = async () => {
     try {
       setLoading(true);
       
-      const startDateIso = dateRange[0].startOf('day').subtract(1, 'day').toISOString();
-      const endDateIso = dateRange[1].endOf('day').add(1, 'day').toISOString();
+      const startDateIso = dateRange[0].startOf('day').toISOString();
+      const endDateIso = dateRange[1].endOf('day').toISOString();
       
       let query = supabase
         .from('transactions')
