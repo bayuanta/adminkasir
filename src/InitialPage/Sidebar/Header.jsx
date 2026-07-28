@@ -43,6 +43,9 @@ const Header = () => {
   };
 
   useEffect(() => {
+    // Set default mini-sidebar on load
+    document.body.classList.add("mini-sidebar");
+
     const handleMouseover = (e) => {
       e.stopPropagation();
 
