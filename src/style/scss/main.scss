@@ -221,9 +221,16 @@ body.mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu > ul > li > a.active 
     width: 260px !important;
 }
 
-.header .header-left .logo {
+/* Expanded mode: show .logo, hide .logo-small */
+body:not(.mini-sidebar) .header .header-left .logo,
+body.mini-sidebar.expand-menu .header .header-left .logo {
     display: flex !important;
     align-items: center !important;
+}
+
+body:not(.mini-sidebar) .header .header-left .logo-small,
+body.mini-sidebar.expand-menu .header .header-left .logo-small {
+    display: none !important;
 }
 
 .header .header-left .logo img {
@@ -240,6 +247,7 @@ body.mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu > ul > li > a.active 
     object-fit: contain !important;
 }
 
+/* Mini mode: hide .logo, show .logo-small */
 body.mini-sidebar:not(.expand-menu) .header .header-left {
     justify-content: center !important;
     padding: 0 !important;
