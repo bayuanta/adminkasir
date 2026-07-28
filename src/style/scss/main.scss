@@ -212,3 +212,21 @@ body.mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu > ul > li > a.active 
     }
 }
 
+/* 6. Dewa Emas Header Logo Styling Override */
+.header .header-left .logo img,
+.header .header-left .logo-small img {
+    width: auto !important;
+    max-width: 100% !important;
+}
+
+body.mini-sidebar:not(.expand-menu) .header .header-left .logo {
+    display: none !important;
+}
+
+body.mini-sidebar:not(.expand-menu) .header .header-left .logo-small {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+

@@ -178,14 +178,30 @@ const Header = () => {
           onMouseLeave={expandMenu}
           onMouseOver={expandMenuOpen}
         >
-          <Link to="/dashboard" className="logo logo-normal">
-            <ImageWithBasePath src="assets/img/logo.png" alt="img" />
+          <Link to="/" className="logo logo-normal d-flex align-items-center gap-2 text-decoration-none">
+            <ImageWithBasePath src="assets/img/logo_dewa_emas.png" alt="Dewa Emas" style={{ height: "38px", width: "auto", objectFit: "contain" }} />
+            <div className="d-flex align-items-center gap-1 lh-1">
+              <span className="fw-bold" style={{ fontSize: "17px", color: "#1E293B", letterSpacing: "-0.3px", fontFamily: "'Outfit', sans-serif" }}>
+                Dewa Emas
+              </span>
+              <span className="badge fw-extrabold" style={{ fontSize: "11px", backgroundColor: "#FFEAD5", color: "#EA580C", padding: "3px 6px", borderRadius: "4px" }}>
+                POS
+              </span>
+            </div>
           </Link>
-          <Link to="/dashboard" className="logo logo-white">
-            <ImageWithBasePath src="assets/img/logo-white.png" alt="img" />
+          <Link to="/" className="logo logo-white d-flex align-items-center gap-2 text-decoration-none">
+            <ImageWithBasePath src="assets/img/logo_dewa_emas.png" alt="Dewa Emas" style={{ height: "38px", width: "auto", objectFit: "contain" }} />
+            <div className="d-flex align-items-center gap-1 lh-1">
+              <span className="fw-bold text-white" style={{ fontSize: "17px", letterSpacing: "-0.3px" }}>
+                Dewa Emas
+              </span>
+              <span className="badge bg-warning text-dark fw-extrabold" style={{ fontSize: "11px", padding: "3px 6px", borderRadius: "4px" }}>
+                POS
+              </span>
+            </div>
           </Link>
-          <Link to="/dashboard" className="logo-small">
-            <ImageWithBasePath src="assets/img/logo-small.png" alt="img" />
+          <Link to="/" className="logo-small d-flex align-items-center justify-content-center">
+            <ImageWithBasePath src="assets/img/logo_dewa_emas.png" alt="Dewa Emas" style={{ height: "34px", width: "auto", objectFit: "contain" }} />
           </Link>
           <Link
             id="toggle_btn"
