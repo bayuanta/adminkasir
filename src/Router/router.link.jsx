@@ -107,6 +107,7 @@ import Callhistory from "../feature-module/Application/callhistory";
 import ToDo from "../feature-module/Application/todo";
 import QRcode from "../feature-module/inventory/qrcode";
 import PurchasesList from "../feature-module/purchases/purchaseslist";
+import SupplierPurchases from "../feature-module/purchases/supplierpurchases";
 import PurchaseOrderReport from "../feature-module/purchases/purchaseorderreport";
 import PurchaseReturns from "../feature-module/purchases/purchasereturns";
 import Appearance from "../feature-module/settings/websitesettings/appearance";
@@ -951,6 +952,13 @@ export const publicRoutes = [
     path: routes.purchaselist,
     name: "purchaselist",
     element: <PurchasesList />,
+    route: Route,
+  },
+  {
+    id: 685,
+    path: routes.supplierpurchases,
+    name: "supplierpurchases",
+    element: <SupplierPurchases />,
     route: Route,
   },
   {

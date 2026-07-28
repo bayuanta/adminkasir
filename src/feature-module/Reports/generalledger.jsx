@@ -35,6 +35,7 @@ const GeneralLedger = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => fetchLedger())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'journal_entries' }, () => fetchLedger())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'journal_lines' }, () => fetchLedger())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'supplier_purchases' }, () => fetchLedger())
       .subscribe();
 
     return () => {

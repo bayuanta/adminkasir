@@ -107,6 +107,7 @@ export const all_routes = {
   variantattributes: "/variant-attributes",
   qrcode: "/qrcode",
   purchaselist: "/purchase-list",
+  supplierpurchases: "/supplier-purchases",
   purchaseorderreport: "/purchase-order-report",
   purchasereturn: "/purchase-returns",
   appearance: "/appearance",
