@@ -59,6 +59,15 @@ const GeneralLedger = () => {
   const fetchLedger = async () => {
     setLoading(true);
     try {
+      // Fetch COA list directly inside fetchLedger to guarantee exact match
+      let coaQuery = supabase.from('coa').select('*').eq('is_active', true).order('account_code');
+      if (selectedStore) {
+        coaQuery = coaQuery.or(`branch_id.eq.${selectedStore},branch_id.is.null`);
+      }
+      const { data: coaData } = await coaQuery;
+      const activeCoas = coaData || [];
+      setCoasList(activeCoas);
+
       const startDate = dateRange && dateRange[0] ? dateRange[0].startOf('day').toISOString() : dayjs().startOf('year').toISOString();
       const endDate = dateRange && dateRange[1] ? dateRange[1].endOf('day').toISOString() : dayjs().endOf('year').toISOString();
 
@@ -76,15 +85,15 @@ const GeneralLedger = () => {
       const { data: jLines } = await jlQuery;
 
       // Find standard COA objects from loaded COA list
-      const kasKasirCoa = coasList.find(c => c.account_code === '1-1000') || { id: 'kas-1', account_code: '1-1000', account_name: 'Kas Tunai POS Utama' };
-      const bankQrisCoa = coasList.find(c => c.account_code === '1-1100') || { id: 'bank-1', account_code: '1-1100', account_name: 'Bank BCA / QRIS Pembayaran' };
-      const pendapatanCoa = coasList.find(c => c.account_code === '4-1000') || { id: 'rev-1', account_code: '4-1000', account_name: 'Pendapatan Penjualan' };
-      const bebanKasirCoa = coasList.find(c => c.account_code === '6-4000') || { id: 'exp-1', account_code: '6-4000', account_name: 'Beban Operasional Kasir' };
-      const bebanBahanBakuCoa = coasList.find(c => c.account_code === '6-5000') || { id: 'exp-2', account_code: '6-5000', account_name: 'Beban Pembelian Bahan Baku' };
-      const bebanGajiCoa = coasList.find(c => c.account_code === '6-1000') || { id: 'exp-3', account_code: '6-1000', account_name: 'Beban Gaji Karyawan' };
-      const bebanListrikCoa = coasList.find(c => c.account_code === '6-2000') || { id: 'exp-4', account_code: '6-2000', account_name: 'Beban Listrik & Air' };
-      const bebanSewaCoa = coasList.find(c => c.account_code === '6-3000') || { id: 'exp-5', account_code: '6-3000', account_name: 'Beban Sewa' };
-      const bebanLainCoa = coasList.find(c => c.account_code === '6-9999') || { id: 'exp-6', account_code: '6-9999', account_name: 'Beban Lain-Lain' };
+      const kasKasirCoa = activeCoas.find(c => c.account_code === '1-1000') || { id: 'kas-1', account_code: '1-1000', account_name: 'Kas Tunai POS Utama' };
+      const bankQrisCoa = activeCoas.find(c => c.account_code === '1-1100') || { id: 'bank-1', account_code: '1-1100', account_name: 'Bank BCA / QRIS Pembayaran' };
+      const pendapatanCoa = activeCoas.find(c => c.account_code === '4-1000') || { id: 'rev-1', account_code: '4-1000', account_name: 'Pendapatan Penjualan' };
+      const bebanKasirCoa = activeCoas.find(c => c.account_code === '6-4000') || { id: 'exp-1', account_code: '6-4000', account_name: 'Beban Operasional Kasir' };
+      const bebanBahanBakuCoa = activeCoas.find(c => c.account_code === '6-5000') || { id: 'exp-2', account_code: '6-5000', account_name: 'Beban Pembelian Bahan Baku' };
+      const bebanGajiCoa = activeCoas.find(c => c.account_code === '6-1000') || { id: 'exp-3', account_code: '6-1000', account_name: 'Beban Gaji Karyawan' };
+      const bebanListrikCoa = activeCoas.find(c => c.account_code === '6-2000') || { id: 'exp-4', account_code: '6-2000', account_name: 'Beban Listrik & Air' };
+      const bebanSewaCoa = activeCoas.find(c => c.account_code === '6-3000') || { id: 'exp-5', account_code: '6-3000', account_name: 'Beban Sewa' };
+      const bebanLainCoa = activeCoas.find(c => c.account_code === '6-9999') || { id: 'exp-6', account_code: '6-9999', account_name: 'Beban Lain-Lain' };
 
       let entries = [];
 
