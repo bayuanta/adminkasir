@@ -424,7 +424,7 @@ const HourlyReport = () => {
         <Card className="mb-4 shadow-sm border-0 rounded-3" bodyStyle={{ padding: '20px' }}>
           <Row gutter={[16, 16]} className="align-items-center">
             {/* Filter Tanggal */}
-            <Col xs={24} md={10} lg={7}>
+            <Col xs={24} md={12} lg={10}>
               <label className="form-label fw-bold mb-1">📅 Pilih Rentang Tanggal:</label>
               <RangePicker
                 style={{ width: '100%' }}
@@ -436,7 +436,7 @@ const HourlyReport = () => {
             </Col>
 
             {/* Filter Jam Start & End */}
-            <Col xs={12} md={7} lg={4}>
+            <Col xs={12} md={6} lg={7}>
               <label className="form-label fw-bold mb-1">🕒 Jam Mulai:</label>
               <Select
                 style={{ width: '100%' }}
@@ -451,7 +451,7 @@ const HourlyReport = () => {
               </Select>
             </Col>
 
-            <Col xs={12} md={7} lg={4}>
+            <Col xs={12} md={6} lg={7}>
               <label className="form-label fw-bold mb-1">🕒 Jam Selesai:</label>
               <Select
                 style={{ width: '100%' }}
@@ -464,41 +464,6 @@ const HourlyReport = () => {
                   </Select.Option>
                 ))}
               </Select>
-            </Col>
-
-            {/* Quick Shift Presets */}
-            <Col xs={24} lg={9}>
-              <label className="form-label fw-bold mb-1 d-block">⚡ Tombol Preset Jam Cepat:</label>
-              <Space wrap>
-                <Button 
-                  size="small" 
-                  type={startHour === 8 && endHour === 15 ? 'primary' : 'default'}
-                  onClick={() => { setStartHour(8); setEndHour(15); }}
-                >
-                  ☀️ Shift Pagi (08:00 - 15:59)
-                </Button>
-                <Button 
-                  size="small"
-                  type={startHour === 11 && endHour === 14 ? 'primary' : 'default'}
-                  onClick={() => { setStartHour(11); setEndHour(14); }}
-                >
-                  🍲 Makan Siang (11:00 - 14:59)
-                </Button>
-                <Button 
-                  size="small"
-                  type={startHour === 15 && endHour === 22 ? 'primary' : 'default'}
-                  onClick={() => { setStartHour(15); setEndHour(22); }}
-                >
-                  🌙 Shift Sore/Malam (15:00 - 22:59)
-                </Button>
-                <Button 
-                  size="small"
-                  type={startHour === 0 && endHour === 23 ? 'primary' : 'default'}
-                  onClick={() => { setStartHour(0); setEndHour(23); }}
-                >
-                  🕒 24 Jam Penuh
-                </Button>
-              </Space>
             </Col>
           </Row>
         </Card>
